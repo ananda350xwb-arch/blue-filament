@@ -26,6 +26,17 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   const activePrintersCount = printers.filter(p => p.status === 'printing').length;
   const inStockFilamentsCount = filaments.filter(f => f.inStock).length;
 
+  const formatTime = (dateVal?: string | number | Date) => {
+    if (!dateVal) return '-';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '-';
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       
@@ -199,7 +210,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                         {order.orderId}
                       </span>
                       <span className="text-[11px] text-slate-400">
-                        {new Date(order.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTime(order.createdAt)}
                       </span>
                     </div>
 

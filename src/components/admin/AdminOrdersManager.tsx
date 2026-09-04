@@ -127,6 +127,23 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
     }
   };
 
+  const formatDateTime = (dateVal?: string | number | Date) => {
+    if (!dateVal) return '-';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return String(dateVal);
+      return d.toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return String(dateVal);
+    }
+  };
+
   const handleCopyLineQuote = (order: Order) => {
     const customerGreeting = order.customerName ? `คุณ ${order.customerName}` : 'คุณลูกค้า';
     const message = `สวัสดีครับ ${customerGreeting} จาก Blue Filament 3D Studio นะครับ ✨
@@ -359,7 +376,7 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
                     {order.orderId}
                   </span>
                   <span className="text-xs text-slate-500 font-medium">
-                    {new Date(order.createdAt).toLocaleDateString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}
+                    {formatDateTime(order.createdAt)}
                   </span>
                 </div>
 
