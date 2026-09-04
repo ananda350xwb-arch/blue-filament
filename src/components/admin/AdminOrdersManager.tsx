@@ -138,6 +138,7 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
 📏 ขนาด: ${order.scale}%
 🔢 จำนวน: ${order.quantity} ชิ้น
 ⏱️ เวลาพิมพ์โดยประมาณ: ${order.estimatedPrintTimeHours || 2.5} ชั่วโมง
+🚚 กำหนดจัดส่ง: ภายใน 5 วัน (เนื่องจากต้องดำเนินการจัดทำตามคิว)
 
 💰 ยอดสุทธิ (รวมส่ง): ${order.quotedPrice ? `฿${order.quotedPrice} บาท` : 'รอตรวจสอบราคา'}
 ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}\n` : ''}

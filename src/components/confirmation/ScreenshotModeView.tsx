@@ -122,6 +122,12 @@ export const ScreenshotModeView: React.FC<ScreenshotModeViewProps> = ({ order, o
           </div>
         )}
 
+        {/* Delivery Timeline Notice */}
+        <div className="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 flex items-center justify-between text-[11px]">
+          <span className="text-slate-600 font-medium">📦 เวลาจัดส่ง:</span>
+          <span className="font-bold text-slate-800">จัดส่งภายใน 5 วัน (ดำเนินการจัดทำ)</span>
+        </div>
+
         {/* Price Status */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3.5 rounded-2xl border-2 border-blue-200 flex items-center justify-between">
           <div>

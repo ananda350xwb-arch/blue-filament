@@ -73,7 +73,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenOrderFlow }) => {
       num: '04',
       title: 'รับของ',
       tagline: 'เราพิมพ์ให้ แล้วจัดส่งถึงคุณ',
-      desc: 'ร้านพิมพ์ด้วยความแม่นยำสูง แพ็คกันกระแทกอย่างดี แล้วส่งตรงถึงบ้านคุณ',
+      desc: 'ร้านพิมพ์ด้วยความแม่นยำสูง ดำเนินการจัดทำตามคิว ตรวจเช็คคุณภาพ และจัดส่งถึงมือคุณภายใน 5 วัน',
       badge: 'Step 4',
       badgeVariant: 'green' as const,
       icon: <PackageCheck className="w-7 h-7 text-emerald-600" />,
@@ -86,8 +86,8 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenOrderFlow }) => {
             <PackageCheck className="w-5 h-5" />
           </div>
           <div className="text-left">
-            <div className="text-xs font-bold text-emerald-800">Express Delivery</div>
-            <div className="text-[11px] font-semibold text-slate-600">จัดส่งภายใน 1-3 วันทำการ</div>
+            <div className="text-xs font-bold text-emerald-800">Made to Order</div>
+            <div className="text-[11px] font-semibold text-slate-600">จัดส่งภายใน 5 วัน (ดำเนินการจัดทำ)</div>
           </div>
         </div>
       )

@@ -142,6 +142,7 @@ export const OrderQuoteModal: React.FC<OrderQuoteModalProps> = ({
 🎨 จำนวนสี: ${order.colorCount} สี (${order.colors.map(c => c.storeColor).join(', ')})
 📏 ขนาด: ${order.scale}% | จำนวน: ${order.quantity} ชิ้น
 ⏱️ เวลาพิมพ์โดยประมาณ: ${hours} ชั่วโมง
+🚚 กำหนดจัดส่ง: ภายใน 5 วัน (เนื่องจากต้องดำเนินการจัดทำตามคิว)
 
 💰 ยอดสุทธิ (รวมจัดส่ง): ${price > 0 ? `฿${price.toLocaleString()} บาท` : 'รอประเมิน'}
 💳 บัญชีโอนชำระเงิน:
@@ -158,6 +159,7 @@ export const OrderQuoteModal: React.FC<OrderQuoteModalProps> = ({
 
 🛠️ รายการโมเดล: ${order.modelName} (${order.colorCount} สี)
 ⏱️ คิวพิมพ์: จัดคิวขึ้นแท่นพิมพ์ 3D เรียบร้อย
+🚚 กำหนดจัดทำและจัดส่ง: ภายใน 5 วัน (ดำเนินการจัดทำตามคิว)
 เมื่อพิมพ์เสร็จและจัดส่งแล้ว ทางร้านจะอัปเดตเลขพัสดุให้ทราบอีกครั้งครับ ขอบคุณมากครับ 🚀`;
 
       case 'printing':

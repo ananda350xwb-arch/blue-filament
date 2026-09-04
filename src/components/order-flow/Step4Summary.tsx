@@ -161,6 +161,17 @@ export const Step4Summary: React.FC<Step4SummaryProps> = ({
           </div>
         )}
 
+        {/* Production & Delivery Timeline */}
+        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-700 font-semibold">
+            <span>📦 กำหนดเวลาจัดส่ง:</span>
+          </div>
+          <div className="font-bold text-slate-900 bg-white px-3 py-1 rounded-xl border border-slate-200 shadow-xs inline-flex items-center gap-1">
+            <span>🚚 จัดส่งภายใน 5 วัน</span>
+            <span className="text-[11px] text-slate-500 font-normal">(ดำเนินการจัดทำตามคิว)</span>
+          </div>
+        </div>
+
         {/* Price Section */}
         <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border-2 border-blue-200">
           <div>

@@ -157,6 +157,12 @@ ${order.note ? `หมายเหตุ: ${order.note}\n` : ''}
             <span>ขนาด: <strong className="text-blue-600">{order.scale}%</strong></span>
             {order.note && <span className="truncate">โน้ต: {order.note}</span>}
           </div>
+
+          {/* Delivery Note */}
+          <div className="bg-blue-50/80 px-3 py-1.5 rounded-xl border border-blue-100 flex items-center justify-between text-[11px]">
+            <span className="text-blue-900 font-medium">⏱️ กำหนดเวลาจัดส่ง:</span>
+            <span className="font-bold text-blue-700">จัดส่งภายใน 5 วัน (ดำเนินการจัดทำตามคิว)</span>
+          </div>
         </div>
 
         {/* Action Buttons Section */}
