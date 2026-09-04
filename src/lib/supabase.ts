@@ -16,6 +16,9 @@ export function normalizeSupabaseUrl(url: string): string {
   return cleaned;
 }
 
+const DEFAULT_SUPABASE_URL = 'https://lnamfrfbwdxuihhhqzle.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxuYW1mcmZid2R4dWloaGhxemxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTA2NjEsImV4cCI6MjEwNDA4NjY2MX0.NbvvpNmQkQn5HVuxWywEAZjIxw_tj5l1IlIvGxz0NB0';
+
 export function getSupabaseConfig(): SupabaseConfig {
   // 1. Try env variables
   const envUrl = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL || '');
@@ -46,6 +49,15 @@ export function getSupabaseConfig(): SupabaseConfig {
     }
   } catch {
     // ignore parsing errors
+  }
+
+  // 3. Built-in default live Supabase credentials for seamless zero-config deployment
+  if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_ANON_KEY) {
+    return {
+      url: DEFAULT_SUPABASE_URL,
+      anonKey: DEFAULT_SUPABASE_ANON_KEY,
+      connected: true,
+    };
   }
 
   return {

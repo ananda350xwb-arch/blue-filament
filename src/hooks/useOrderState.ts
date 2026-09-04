@@ -3,6 +3,7 @@ import { ColorMapping, Order, OrderStep, ModelPreset } from '../types';
 import { FILAMENT_COLORS } from '../data/filamentColors';
 import { INITIAL_DEMO_ORDERS } from '../data/initialAdminData';
 import { useLocalStorage } from './useLocalStorage';
+import { CloudDB } from '../lib/supabaseSync';
 
 export function generateOrderId(): string {
   const date = new Date();
@@ -171,6 +172,11 @@ export function useOrderState() {
     setLastCompletedOrder(finalOrder);
     setIsOpen(false);
     setIsConfirmationOpen(true);
+
+    // Upload to Supabase Cloud Database immediately
+    CloudDB.upsertOrder(finalOrder).catch(err => {
+      console.warn('Background Supabase order sync warning:', err);
+    });
 
     return finalOrder;
   }, [currentOrderId, modelUrl, modelName, colorCount, colorMappings, quantity, scaleMode, scale, infill, note, setRecentOrders]);
