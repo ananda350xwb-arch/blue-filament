@@ -380,6 +380,13 @@ export function useAdminStore() {
   }, [setSettings]);
 
   // --- BACKUP & RESET ---
+  const seedDemoOrders = useCallback(async () => {
+    setOrders(INITIAL_DEMO_ORDERS);
+    for (const ord of INITIAL_DEMO_ORDERS) {
+      await CloudDB.upsertOrder(ord);
+    }
+  }, [setOrders]);
+
   const resetToDefaults = useCallback(() => {
     setOrders(INITIAL_DEMO_ORDERS);
     setFilaments(FILAMENT_COLORS);
@@ -455,6 +462,7 @@ export function useAdminStore() {
     deleteModelPreset,
     updatePrinterStatus,
     updateSettings,
+    seedDemoOrders,
     resetToDefaults,
     exportDataJson,
     importDataJson,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Clock, CheckCircle2, Printer, Package, Truck, XCircle, Trash2, Edit3, ExternalLink, MessageCircle, Play, Check } from 'lucide-react';
+import { Search, Clock, CheckCircle2, Printer, Package, Truck, XCircle, Trash2, Edit3, ExternalLink, MessageCircle, Play, Check, Sparkles, Database, ShoppingCart, RefreshCw } from 'lucide-react';
 import { Order, OrderStatus } from '../../types';
 
 interface AdminOrdersManagerProps {
@@ -7,6 +7,8 @@ interface AdminOrdersManagerProps {
   onOpenOrderQuote: (order: Order) => void;
   onUpdateStatus?: (orderId: string, status: OrderStatus, trackingNumber?: string) => void;
   onDeleteOrder: (orderId: string) => void;
+  onSeedDemoOrders?: () => Promise<void> | void;
+  onGoToStorefront?: () => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -15,10 +17,13 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
   onOpenOrderQuote,
   onUpdateStatus,
   onDeleteOrder,
+  onSeedDemoOrders,
+  onGoToStorefront,
   onShowToast,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const safeOrders = Array.isArray(orders) ? orders : [];
 
@@ -41,6 +46,19 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
   const totalQuotedRevenue = safeOrders.reduce((sum, o) => sum + (o?.quotedPrice || 0), 0);
   const pendingCount = safeOrders.filter(o => o?.status === 'PENDING_REVIEW').length;
   const printingCount = safeOrders.filter(o => o?.status === 'PRINTING').length;
+
+  const handleSeedOrders = async () => {
+    if (!onSeedDemoOrders) return;
+    setIsSeeding(true);
+    try {
+      await onSeedDemoOrders();
+      onShowToast('โหลดออเดอร์ตัวอย่าง 3 รายการสำเร็จ!', 'ข้อมูลซิงค์ขึ้น Supabase Cloud เรียบร้อยแล้ว', 'success');
+    } catch {
+      onShowToast('เกิดข้อผิดพลาดในการโหลดข้อมูลตัวอย่าง', undefined, 'error');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -89,24 +107,46 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
       {/* Header & Quick Summary Ribbon */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display font-black text-2xl sm:text-3xl text-slate-900">
-            จัดการรายการสั่งพิมพ์ ({orders.length})
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            ระบบประสานงานรับออเดอร์ คำนวณราคา ตัดสต็อกอัตโนมัติ และติดตามสถานะ
+          <div className="flex items-center gap-2.5">
+            <h2 className="font-display font-black text-2xl sm:text-3xl text-slate-900">
+              จัดการรายการสั่งพิมพ์ ({safeOrders.length})
+            </h2>
+            <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Supabase Realtime
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            ระบบประสานงานรับออเดอร์ คำนวณราคา ตัดสต็อกอัตโนมัติ และติดตามสถานะแบบสดข้ามอุปกรณ์
           </p>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative w-full md:w-80">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหา Order ID หรือชื่อโมเดล..."
-            className="w-full bg-white border-2 border-slate-200 focus:border-blue-600 rounded-2xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 outline-none shadow-sm"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+        {/* Actions & Search */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          {onSeedDemoOrders && (
+            <button
+              type="button"
+              onClick={handleSeedOrders}
+              disabled={isSeeding}
+              className="btn-3d-secondary px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-800 hover:text-blue-600 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              title="โหลดออเดอร์ตัวอย่าง 3 รายการเพื่อทดสอบระบบ"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>{isSeeding ? 'กำลังซิงค์...' : 'โหลดออเดอร์ตัวอย่าง'}</span>
+            </button>
+          )}
+
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ค้นหา Order ID หรือชื่อโมเดล..."
+              className="w-full bg-white border-2 border-slate-200 focus:border-blue-600 rounded-2xl pl-10 pr-4 py-2 text-xs sm:text-sm text-slate-900 outline-none shadow-sm"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+          </div>
         </div>
       </div>
 
@@ -114,7 +154,7 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white rounded-3xl p-4 border-2 border-slate-200 shadow-sm">
         <div className="p-2 border-r border-slate-100 last:border-0">
           <span className="text-[10px] uppercase font-bold text-slate-400 block">TOTAL ORDERS</span>
-          <span className="font-display font-black text-xl text-slate-900">{orders.length} ออเดอร์</span>
+          <span className="font-display font-black text-xl text-slate-900">{safeOrders.length} ออเดอร์</span>
         </div>
         <div className="p-2 border-r border-slate-100 last:border-0">
           <span className="text-[10px] uppercase font-bold text-amber-800 block">PENDING REVIEW</span>
@@ -133,12 +173,12 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center gap-2 pb-1 overflow-x-auto">
         {[
-          { id: 'ALL', label: 'ทั้งหมด', count: orders.length },
+          { id: 'ALL', label: 'ทั้งหมด', count: safeOrders.length },
           { id: 'PENDING_REVIEW', label: 'รอตรวจสอบราคา', count: pendingCount },
-          { id: 'CONFIRMED', label: 'ยืนยันราคาแล้ว', count: orders.filter(o => o.status === 'CONFIRMED').length },
+          { id: 'CONFIRMED', label: 'ยืนยันราคาแล้ว', count: safeOrders.filter(o => o.status === 'CONFIRMED').length },
           { id: 'PRINTING', label: 'กำลังพิมพ์ 3D', count: printingCount },
-          { id: 'COMPLETED', label: 'พิมพ์เสร็จแล้ว', count: orders.filter(o => o.status === 'COMPLETED').length },
-          { id: 'SHIPPED', label: 'จัดส่งแล้ว', count: orders.filter(o => o.status === 'SHIPPED').length },
+          { id: 'COMPLETED', label: 'พิมพ์เสร็จแล้ว', count: safeOrders.filter(o => o.status === 'COMPLETED').length },
+          { id: 'SHIPPED', label: 'จัดส่งแล้ว', count: safeOrders.filter(o => o.status === 'SHIPPED').length },
         ].map(tab => (
           <button
             key={tab.id}
@@ -161,11 +201,70 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
 
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border-2 border-slate-200 space-y-3 shadow-sm">
-          <div className="text-4xl">📋</div>
-          <h3 className="font-bold text-slate-700">ไม่พบรายการสั่งพิมพ์ในหมวดนี้</h3>
-          <p className="text-xs text-slate-400">ลองเปลี่ยนตัวกรองหรือค้นหาด้วย Order ID อื่น</p>
-        </div>
+        safeOrders.length === 0 ? (
+          /* Empty Database State */
+          <div className="bg-white rounded-3xl border-2 border-dashed border-slate-300 p-8 sm:p-12 text-center space-y-6 shadow-sm">
+            <div className="w-16 h-16 rounded-3xl bg-blue-50 border-2 border-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
+              <Database className="w-8 h-8" />
+            </div>
+
+            <div className="max-w-md mx-auto space-y-2">
+              <h3 className="font-display font-black text-xl text-slate-900">
+                ยังไม่มีรายการสั่งพิมพ์ในระบบ
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                เมื่อลูกค้ากดสั่งพิมพ์จากหน้าร้าน (บนโทรศัพท์มือถือ หรือคอมพิวเตอร์) ระบบจะส่งออเดอร์เข้ามาที่นี่อัตโนมัติแบบ Real-time ผ่าน Supabase Cloud
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              {onSeedDemoOrders && (
+                <button
+                  type="button"
+                  onClick={handleSeedOrders}
+                  disabled={isSeeding}
+                  className="btn-3d-blue w-full sm:w-auto px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white shadow-3d-blue flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <Sparkles className="w-4 h-4 text-yellow-300" />
+                  <span>{isSeeding ? 'กำลังบันทึกข้อมูล...' : '⚡ โหลดออเดอร์ตัวอย่าง 3 รายการ'}</span>
+                </button>
+              )}
+
+              {onGoToStorefront && (
+                <button
+                  type="button"
+                  onClick={onGoToStorefront}
+                  className="btn-3d-secondary w-full sm:w-auto px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 hover:text-blue-600 flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-all active:scale-95"
+                >
+                  <ShoppingCart className="w-4 h-4 text-blue-600" />
+                  <span>🛒 ไปที่หน้าร้านเพื่อทดลองสั่งพิมพ์</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Filter / Search Match Empty State */
+          <div className="text-center py-16 bg-white rounded-3xl border-2 border-slate-200 space-y-4 shadow-sm">
+            <div className="text-4xl">🔍</div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-slate-800">ไม่พบรายการสั่งพิมพ์ในหมวดที่เลือก</h3>
+              <p className="text-xs text-slate-400">
+                {searchQuery ? `ไม่พบข้อมูลที่ตรงกับ "${searchQuery}"` : 'ไม่มีออเดอร์ในสถานะนี้'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterStatus('ALL');
+                setSearchQuery('');
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>ล้างตัวกรองและดูทั้งหมด ({safeOrders.length})</span>
+            </button>
+          </div>
+        )
       ) : (
         <div className="space-y-4">
           {filteredOrders.map(order => (
