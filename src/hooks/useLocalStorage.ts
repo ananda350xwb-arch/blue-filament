@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // Custom event name for same-tab cross-component synchronization
 const STORAGE_EVENT_NAME = 'blue_filament_local_storage_sync';
@@ -8,30 +8,19 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      if (item !== null) {
+        return JSON.parse(item);
+      }
+      // If item doesn't exist, initialize it in localStorage
+      window.localStorage.setItem(key, JSON.stringify(initialValue));
+      return initialValue;
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
 
-  const isInternalUpdate = useRef(false);
-
-  // Sync state to localStorage whenever storedValue changes
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(storedValue));
-      // Dispatch custom event for same-window component updates
-      if (isInternalUpdate.current) {
-        window.dispatchEvent(new CustomEvent(STORAGE_EVENT_NAME, { detail: { key, value: storedValue } }));
-        isInternalUpdate.current = false;
-      }
-    } catch (error) {
-      console.warn(`Error setting localStorage key "${key}":`, error);
-    }
-  }, [key, storedValue]);
-
-  // Listen to storage events from other tabs / windows
+  // Listen to storage events from other tabs/windows and same-tab custom events
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === key && e.newValue) {
@@ -43,7 +32,6 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
       }
     };
 
-    // Listen to custom event for same-tab updates
     const handleCustomSync = (e: Event) => {
       const customEvent = e as CustomEvent<{ key: string; value: T }>;
       if (customEvent.detail && customEvent.detail.key === key) {
@@ -61,12 +49,23 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   }, [key]);
 
   const setValue = useCallback((value: T | ((val: T) => T)) => {
-    isInternalUpdate.current = true;
-    setStoredValue(prev => {
-      const valueToStore = value instanceof Function ? value(prev) : value;
-      return valueToStore;
-    });
-  }, []);
+    try {
+      setStoredValue(prev => {
+        const valueToStore = value instanceof Function ? value(prev) : value;
+        try {
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          // Dispatch custom event for same-window component updates
+          window.dispatchEvent(new CustomEvent(STORAGE_EVENT_NAME, { detail: { key, value: valueToStore } }));
+        } catch (err) {
+          console.warn(`Error saving to localStorage key "${key}":`, err);
+        }
+        return valueToStore;
+      });
+    } catch (error) {
+      console.warn(`Error setting state for key "${key}":`, error);
+    }
+  }, [key]);
 
   return [storedValue, setValue];
 }
+

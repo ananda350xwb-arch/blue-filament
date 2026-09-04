@@ -70,7 +70,6 @@ export function App() {
   const {
     filaments,
     modelPresets,
-    addCustomerOrder,
   } = useAdminStore();
 
   const {
@@ -131,11 +130,8 @@ export function App() {
   };
 
   const handleCompleteOrder = () => {
-    const placedOrder = completeOrder();
-    if (placedOrder) {
-      addCustomerOrder(placedOrder);
-    }
-    addToast('สร้างรายการสั่งพิมพ์สำเร็จ!', 'แคปหน้าจอหรือคัดลอกข้อความส่งทาง LINE ได้เลย', 'success');
+    completeOrder();
+    addToast('สร้างรายการสั่งพิมพ์สำเร็จ!', 'บันทึกรายการเข้าสู่ระบบหลังบ้านเรียบร้อยแล้ว', 'success');
   };
 
   const handleExitAdmin = () => {

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ColorMapping, Order, OrderStep, ModelPreset } from '../types';
 import { FILAMENT_COLORS } from '../data/filamentColors';
+import { INITIAL_DEMO_ORDERS } from '../data/initialAdminData';
 import { useLocalStorage } from './useLocalStorage';
 
 export function generateOrderId(): string {
@@ -40,7 +41,7 @@ export function useOrderState() {
   const [infill, setInfill] = useState<'standard' | 'strong' | 'solid'>('standard');
   const [note, setNote] = useState('');
   const [currentOrderId, setCurrentOrderId] = useState<string>(generateOrderId());
-  const [recentOrders, setRecentOrders] = useLocalStorage<Order[]>('blue_filament_orders', []);
+  const [recentOrders, setRecentOrders] = useLocalStorage<Order[]>('blue_filament_orders', INITIAL_DEMO_ORDERS);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<Order | null>(null);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [isScreenshotMode, setIsScreenshotMode] = useState(false);
@@ -150,7 +151,7 @@ export function useOrderState() {
       modelUrl: modelUrl.trim() || 'https://makerworld.com/',
       modelName: modelName.trim() || 'Custom 3D Model',
       colorCount,
-      colors: colorMappings.map((m, i) => ({
+      colors: colorMappings.slice(0, colorCount).map((m, i) => ({
         slot: i + 1,
         originalColor: m.originalColor,
         storeColor: m.storeColorNameTh,
@@ -166,7 +167,7 @@ export function useOrderState() {
       createdAt: new Date().toISOString()
     };
 
-    setRecentOrders(prev => [finalOrder, ...prev.filter(o => o.orderId !== finalOrder.orderId)].slice(0, 10));
+    setRecentOrders(prev => [finalOrder, ...prev.filter(o => o.orderId !== finalOrder.orderId)]);
     setLastCompletedOrder(finalOrder);
     setIsOpen(false);
     setIsConfirmationOpen(true);
