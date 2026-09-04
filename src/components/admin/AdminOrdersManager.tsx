@@ -20,14 +20,17 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredOrders = orders.filter(order => {
+  const safeOrders = Array.isArray(orders) ? orders : [];
+
+  const filteredOrders = safeOrders.filter(order => {
+    if (!order) return false;
     if (filterStatus !== 'ALL' && order.status !== filterStatus) {
       return false;
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
-        order.orderId.toLowerCase().includes(q) ||
+        (order.orderId && order.orderId.toLowerCase().includes(q)) ||
         (order.modelName && order.modelName.toLowerCase().includes(q)) ||
         (order.note && order.note.toLowerCase().includes(q))
       );
@@ -35,9 +38,9 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
     return true;
   });
 
-  const totalQuotedRevenue = orders.reduce((sum, o) => sum + (o.quotedPrice || 0), 0);
-  const pendingCount = orders.filter(o => o.status === 'PENDING_REVIEW').length;
-  const printingCount = orders.filter(o => o.status === 'PRINTING').length;
+  const totalQuotedRevenue = safeOrders.reduce((sum, o) => sum + (o?.quotedPrice || 0), 0);
+  const pendingCount = safeOrders.filter(o => o?.status === 'PENDING_REVIEW').length;
+  const printingCount = safeOrders.filter(o => o?.status === 'PRINTING').length;
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -208,10 +211,10 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
 
                   {/* Colors List */}
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {order.colors.map((c, i) => (
+                    {(order.colors || []).map((c, i) => (
                       <span key={i} className="inline-flex items-center gap-1.5 text-[11px] bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700 shadow-sm">
-                        <span className="w-2.5 h-2.5 rounded-full border border-white shadow-xs" style={{ background: c.hex }} />
-                        <span className="font-bold">{c.storeColor}</span>
+                        <span className="w-2.5 h-2.5 rounded-full border border-white shadow-xs" style={{ background: c?.hex || '#2563EB' }} />
+                        <span className="font-bold">{c?.storeColor || 'Color'}</span>
                       </span>
                     ))}
                   </div>

@@ -20,17 +20,18 @@ export const AdminFilamentManager: React.FC<AdminFilamentManagerProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredFilaments = filaments.filter(f => {
+  const filteredFilaments = (filaments || []).filter(f => {
+    if (!f) return false;
     if (selectedCategory !== 'all' && f.category !== selectedCategory) {
       return false;
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
-        f.name.toLowerCase().includes(q) ||
-        f.nameTh.toLowerCase().includes(q) ||
-        f.material.toLowerCase().includes(q) ||
-        f.hex.toLowerCase().includes(q)
+        (f.name && f.name.toLowerCase().includes(q)) ||
+        (f.nameTh && f.nameTh.toLowerCase().includes(q)) ||
+        (f.material && f.material.toLowerCase().includes(q)) ||
+        (f.hex && f.hex.toLowerCase().includes(q))
       );
     }
     return true;

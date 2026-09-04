@@ -46,15 +46,15 @@ export const AdminModelsManager: React.FC<AdminModelsManagerProps> = ({
 
   const openEdit = (preset: ModelPreset) => {
     setEditingModel(preset);
-    setNameTh(preset.nameTh);
-    setName(preset.name);
-    setCategory(preset.category);
-    setUrl(preset.url);
-    setColorCount(preset.colorCount);
-    setImageUrl(preset.imageUrl);
-    setAuthor(preset.author);
-    setTags(preset.tags.join(', '));
-    setDescriptionTh(preset.descriptionTh);
+    setNameTh(preset.nameTh || preset.name || '');
+    setName(preset.name || '');
+    setCategory(preset.category || 'Toys & Flexi');
+    setUrl(preset.url || '');
+    setColorCount(preset.colorCount || 4);
+    setImageUrl(preset.imageUrl || '');
+    setAuthor(preset.author || '');
+    setTags(Array.isArray(preset.tags) ? preset.tags.join(', ') : (preset.tags || ''));
+    setDescriptionTh(preset.descriptionTh || '');
     setIsEditing(true);
   };
 
@@ -128,7 +128,7 @@ export const AdminModelsManager: React.FC<AdminModelsManagerProps> = ({
 
       {/* Models Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {modelPresets.map(preset => (
+        {(Array.isArray(modelPresets) ? modelPresets : []).map(preset => (
           <div
             key={preset.id}
             className="bg-white rounded-3xl overflow-hidden border-2 border-slate-200 hover:border-blue-400 transition-all shadow-sm flex flex-col justify-between"
@@ -137,16 +137,16 @@ export const AdminModelsManager: React.FC<AdminModelsManagerProps> = ({
               {/* Image & Category */}
               <div className="relative h-44 bg-slate-100 overflow-hidden">
                 <img
-                  src={preset.imageUrl}
-                  alt={preset.nameTh}
+                  src={preset.imageUrl || 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80'}
+                  alt={preset.nameTh || preset.name || 'Model'}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-2.5 left-2.5 right-2.5 flex justify-between">
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/90 text-slate-900 shadow-sm border border-slate-200">
-                    {preset.category}
+                    {preset.category || 'Toys'}
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500 text-white shadow-sm">
-                    {preset.colorCount} สี
+                    {preset.colorCount || 1} สี
                   </span>
                 </div>
               </div>
@@ -154,10 +154,10 @@ export const AdminModelsManager: React.FC<AdminModelsManagerProps> = ({
               {/* Info */}
               <div className="p-4 space-y-2">
                 <h3 className="font-display font-black text-base text-slate-900 truncate">
-                  {preset.nameTh}
+                  {preset.nameTh || preset.name || 'Model Name'}
                 </h3>
                 <p className="text-xs text-slate-500 line-clamp-2">
-                  {preset.descriptionTh}
+                  {preset.descriptionTh || ''}
                 </p>
                 <div className="flex items-center gap-1.5 text-xs text-blue-600 font-bold pt-1">
                   <span className="truncate">{preset.url}</span>
@@ -168,7 +168,7 @@ export const AdminModelsManager: React.FC<AdminModelsManagerProps> = ({
 
             {/* Actions */}
             <div className="p-4 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-              <span className="text-[11px] text-slate-400">By {preset.author}</span>
+              <span className="text-[11px] text-slate-400">By {preset.author || 'Designer'}</span>
 
               <div className="flex items-center gap-1.5">
                 <button

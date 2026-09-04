@@ -28,26 +28,54 @@ export function orderToDbRow(order: Order) {
 
 // Convert Supabase Row to App Order
 export function dbRowToOrder(row: any): Order {
+  if (!row) {
+    return {
+      orderId: `BF-${Date.now()}`,
+      modelUrl: 'https://makerworld.com/',
+      modelName: '3D Model',
+      colorCount: 1,
+      colors: [],
+      quantity: 1,
+      scale: 100,
+      infill: 'standard',
+      note: '',
+      status: 'PENDING_REVIEW',
+      priceStatus: 'TO BE CONFIRMED',
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  let parsedColors: any[] = [];
+  try {
+    if (typeof row.colors === 'string') {
+      parsedColors = JSON.parse(row.colors);
+    } else if (Array.isArray(row.colors)) {
+      parsedColors = row.colors;
+    }
+  } catch {
+    parsedColors = [];
+  }
+
   return {
-    orderId: row.order_id,
-    modelUrl: row.model_url,
-    modelName: row.model_name,
-    colorCount: Number(row.color_count),
-    colors: row.colors || [],
-    quantity: Number(row.quantity),
-    scale: Number(row.scale),
-    infill: row.infill,
+    orderId: row.order_id || `BF-${Date.now()}`,
+    modelUrl: row.model_url || 'https://makerworld.com/',
+    modelName: row.model_name || '3D Model',
+    colorCount: Number(row.color_count) || Math.max(1, parsedColors.length),
+    colors: Array.isArray(parsedColors) ? parsedColors : [],
+    quantity: Number(row.quantity) || 1,
+    scale: Number(row.scale) || 100,
+    infill: row.infill || 'standard',
     note: row.note || '',
-    status: row.status,
-    priceStatus: row.price_status,
+    status: row.status || 'PENDING_REVIEW',
+    priceStatus: row.price_status || 'TO BE CONFIRMED',
     quotedPrice: row.quoted_price ? Number(row.quoted_price) : undefined,
     estimatedGrams: row.estimated_grams ? Number(row.estimated_grams) : undefined,
     estimatedPrintTimeHours: row.estimated_print_time_hours ? Number(row.estimated_print_time_hours) : undefined,
-    assignedPrinterId: row.assigned_printer_id,
-    internalNotes: row.internal_notes,
-    trackingNumber: row.tracking_number,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    assignedPrinterId: row.assigned_printer_id || undefined,
+    internalNotes: row.internal_notes || undefined,
+    trackingNumber: row.tracking_number || undefined,
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || undefined,
   };
 }
 
@@ -55,13 +83,13 @@ export function dbRowToOrder(row: any): Order {
 export function filamentToDbRow(f: FilamentColor) {
   return {
     id: f.id,
-    name: f.name,
-    name_th: f.nameTh,
-    hex: f.hex,
+    name: f.name || 'Filament',
+    name_th: f.nameTh || f.name || 'สีฟิลาเมนต์',
+    hex: f.hex || '#2563EB',
     secondary_hex: f.secondaryHex || null,
-    material: f.material,
-    category: f.category,
-    in_stock: f.inStock,
+    material: f.material || 'PLA+',
+    category: f.category || 'basic',
+    in_stock: f.inStock ?? true,
     popular: f.popular || false,
     badge: f.badge || null,
     description_th: f.descriptionTh || null,
@@ -71,20 +99,34 @@ export function filamentToDbRow(f: FilamentColor) {
 }
 
 export function dbRowToFilament(row: any): FilamentColor {
+  if (!row) {
+    return {
+      id: `fil-${Date.now()}`,
+      name: 'Filament Color',
+      nameTh: 'สีฟิลาเมนต์',
+      hex: '#2563EB',
+      material: 'PLA+',
+      category: 'basic',
+      inStock: true,
+      remainingGrams: 1000,
+      pricePerGram: 1.2,
+    };
+  }
+
   return {
-    id: row.id,
-    name: row.name,
-    nameTh: row.name_th,
-    hex: row.hex,
+    id: row.id || `fil-${Date.now()}`,
+    name: row.name || 'Filament Color',
+    nameTh: row.name_th || row.name || 'สีฟิลาเมนต์',
+    hex: row.hex || '#2563EB',
     secondaryHex: row.secondary_hex || undefined,
-    material: row.material,
-    category: row.category,
-    inStock: Boolean(row.in_stock),
+    material: row.material || 'PLA+',
+    category: row.category || 'basic',
+    inStock: row.in_stock !== undefined ? Boolean(row.in_stock) : true,
     popular: Boolean(row.popular),
     badge: row.badge || undefined,
     descriptionTh: row.description_th || undefined,
-    remainingGrams: row.remaining_grams !== null ? Number(row.remaining_grams) : 1000,
-    pricePerGram: row.price_per_gram !== null ? Number(row.price_per_gram) : 1.2,
+    remainingGrams: row.remaining_grams !== null && row.remaining_grams !== undefined ? Number(row.remaining_grams) : 1000,
+    pricePerGram: row.price_per_gram !== null && row.price_per_gram !== undefined ? Number(row.price_per_gram) : 1.2,
   };
 }
 

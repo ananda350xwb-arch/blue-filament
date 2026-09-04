@@ -8,6 +8,7 @@ import { AdminPrinterFleet } from './AdminPrinterFleet';
 import { AdminSettings } from './AdminSettings';
 import { OrderQuoteModal } from './OrderQuoteModal';
 import { FilamentEditModal } from './FilamentEditModal';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 import { Order, FilamentColor } from '../../types';
 import { useAdminStore } from '../../hooks/useAdminStore';
 
@@ -142,68 +143,68 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExitAdmin, onS
 
       {/* Main Admin Content Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {activeTab === 'overview' && (
-          <AdminOverview
-            orders={orders}
-            filaments={filaments}
-            printers={printers}
-            onNavigateTab={(tab) => setActiveTab(tab)}
-            onOpenOrderQuote={handleOpenQuote}
-            onOpenAddFilament={() => handleOpenFilamentEdit(null)}
-          />
-        )}
+        <ErrorBoundary fallbackTitle="ไม่สามารถแสดงข้อมูลส่วนนี้ได้ กรุณารีเฟรชหน้าจอ">
+          {activeTab === 'overview' && (
+            <AdminOverview
+              orders={orders || []}
+              filaments={filaments || []}
+              printers={printers || []}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+              onOpenOrderQuote={handleOpenQuote}
+              onOpenAddFilament={() => handleOpenFilamentEdit(null)}
+            />
+          )}
 
-        {activeTab === 'orders' && (
-          <AdminOrdersManager
-            orders={orders}
-            onOpenOrderQuote={handleOpenQuote}
-            onUpdateStatus={updateOrderStatus}
-            onDeleteOrder={deleteOrder}
-            onShowToast={onShowToast}
-          />
-        )}
+          {activeTab === 'orders' && (
+            <AdminOrdersManager
+              orders={orders || []}
+              onOpenOrderQuote={handleOpenQuote}
+              onUpdateStatus={updateOrderStatus}
+              onDeleteOrder={deleteOrder}
+              onShowToast={onShowToast}
+            />
+          )}
 
-        {activeTab === 'filaments' && (
-          <AdminFilamentManager
-            filaments={filaments}
-            onOpenEditFilament={handleOpenFilamentEdit}
-            onToggleStock={toggleFilamentStock}
-            onDeleteFilament={deleteFilament}
-            onShowToast={onShowToast}
-          />
-        )}
+          {activeTab === 'filaments' && (
+            <AdminFilamentManager
+              filaments={filaments || []}
+              onOpenEditFilament={handleOpenFilamentEdit}
+              onToggleStock={toggleFilamentStock}
+              onDeleteFilament={deleteFilament}
+              onShowToast={onShowToast}
+            />
+          )}
 
-        {activeTab === 'presets' && (
-          <AdminModelsManager
-            modelPresets={modelPresets}
-            onAddModel={addModelPreset}
-            onUpdateModel={updateModelPreset}
-            onDeleteModel={deleteModelPreset}
-            onShowToast={onShowToast}
-          />
-        )}
+          {activeTab === 'presets' && (
+            <AdminModelsManager
+              modelPresets={modelPresets || []}
+              onAddModel={addModelPreset}
+              onUpdateModel={updateModelPreset}
+              onDeleteModel={deleteModelPreset}
+              onShowToast={onShowToast}
+            />
+          )}
 
-        {activeTab === 'fleet' && (
-          <AdminPrinterFleet
-            printers={printers}
-            orders={orders}
-            onUpdatePrinterStatus={updatePrinterStatus}
-            onShowToast={onShowToast}
-          />
-        )}
+          {activeTab === 'fleet' && (
+            <AdminPrinterFleet
+              printers={printers || []}
+              orders={orders || []}
+              onUpdatePrinterStatus={updatePrinterStatus}
+              onShowToast={onShowToast}
+            />
+          )}
 
-        {activeTab === 'settings' && (
-          <AdminSettings
-            settings={settings}
-            onUpdateSettings={updateSettings}
-            onExportData={exportDataJson}
-            onImportData={importDataJson}
-            onResetDefaults={resetToDefaults}
-            onShowToast={onShowToast}
-          />
-        )}
-
+          {activeTab === 'settings' && (
+            <AdminSettings
+              settings={settings}
+              onUpdateSettings={updateSettings}
+              onExportData={exportDataJson}
+              onImportData={importDataJson}
+              onResetDefaults={resetToDefaults}
+              onShowToast={onShowToast}
+            />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Order Quote & Review Modal */}
