@@ -8,10 +8,18 @@ export interface SupabaseConfig {
 
 const STORAGE_CONFIG_KEY = 'blue_filament_supabase_config';
 
+export function normalizeSupabaseUrl(url: string): string {
+  if (!url) return '';
+  let cleaned = url.trim();
+  cleaned = cleaned.replace(/\/rest\/v1\/?$/, '');
+  cleaned = cleaned.replace(/\/+$/, '');
+  return cleaned;
+}
+
 export function getSupabaseConfig(): SupabaseConfig {
   // 1. Try env variables
-  const envUrl = import.meta.env.VITE_SUPABASE_URL;
-  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const envUrl = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL || '');
+  const envKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
   if (envUrl && envKey) {
     return {
@@ -26,10 +34,12 @@ export function getSupabaseConfig(): SupabaseConfig {
     const saved = localStorage.getItem(STORAGE_CONFIG_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.url && parsed.anonKey) {
+      const url = normalizeSupabaseUrl(parsed.url || '');
+      const anonKey = (parsed.anonKey || '').trim();
+      if (url && anonKey) {
         return {
-          url: parsed.url,
-          anonKey: parsed.anonKey,
+          url,
+          anonKey,
           connected: true,
         };
       }
@@ -88,8 +98,9 @@ export function getSupabaseClient(): SupabaseClient | null {
   return supabaseInstance;
 }
 
-export async function testSupabaseConnection(url: string, anonKey: string): Promise<{ success: boolean; message: string }> {
+export async function testSupabaseConnection(rawUrl: string, anonKey: string): Promise<{ success: boolean; message: string }> {
   try {
+    const url = normalizeSupabaseUrl(rawUrl);
     if (!url.startsWith('https://') || !url.includes('supabase.co')) {
       return { success: false, message: 'URL ต้องขึ้นต้นด้วย https:// และลงท้ายด้วย .supabase.co' };
     }
