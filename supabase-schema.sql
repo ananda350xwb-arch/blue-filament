@@ -1,9 +1,9 @@
 -- ==============================================================================
 -- BLUE FILAMENT 3D STUDIO - SUPABASE DATABASE SCHEMA
--- Copy and paste this into Supabase Dashboard -> SQL Editor -> Run
+-- Copy all lines below and paste into Supabase SQL Editor -> Click RUN
 -- ==============================================================================
 
--- 1. Create ORDERS table
+-- 1. ORDERS TABLE
 CREATE TABLE IF NOT EXISTS public.bf_orders (
   order_id TEXT PRIMARY KEY,
   model_url TEXT NOT NULL,
@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS public.bf_orders (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Enable Row Level Security (RLS) & Public Policies
 ALTER TABLE public.bf_orders ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read access to bf_orders" ON public.bf_orders;
@@ -41,7 +40,8 @@ CREATE POLICY "Allow public update access to bf_orders" ON public.bf_orders FOR 
 DROP POLICY IF EXISTS "Allow public delete access to bf_orders" ON public.bf_orders;
 CREATE POLICY "Allow public delete access to bf_orders" ON public.bf_orders FOR DELETE USING (true);
 
--- 2. Create FILAMENTS table
+
+-- 2. FILAMENTS TABLE
 CREATE TABLE IF NOT EXISTS public.bf_filaments (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -60,52 +60,12 @@ CREATE TABLE IF NOT EXISTS public.bf_filaments (
 );
 
 ALTER TABLE public.bf_filaments ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "Allow public all on bf_filaments" ON public.bf_filaments;
 CREATE POLICY "Allow public all on bf_filaments" ON public.bf_filaments FOR ALL USING (true);
 
--- 3. Create MODEL_PRESETS table
-CREATE TABLE IF NOT EXISTS public.bf_presets (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  name_th TEXT NOT NULL,
-  category TEXT NOT NULL,
-  url TEXT NOT NULL,
-  color_count INTEGER NOT NULL DEFAULT 4,
-  default_colors JSONB NOT NULL DEFAULT '[]'::jsonb,
-  image_url TEXT NOT NULL,
-  author TEXT NOT NULL,
-  tags TEXT[] NOT NULL DEFAULT '{}',
-  description_th TEXT,
-  recommended_size TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
 
-ALTER TABLE public.bf_presets ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public all on bf_presets" ON public.bf_presets;
-CREATE POLICY "Allow public all on bf_presets" ON public.bf_presets FOR ALL USING (true);
-
--- 4. Create PRINTER_FLEET table
-CREATE TABLE IF NOT EXISTS public.bf_printers (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  model TEXT NOT NULL,
-  has_ams BOOLEAN NOT NULL DEFAULT true,
-  ams_slots INTEGER NOT NULL DEFAULT 4,
-  status TEXT NOT NULL DEFAULT 'idle',
-  current_order_id TEXT,
-  current_order_name TEXT,
-  progress_percent INTEGER DEFAULT 0,
-  time_remaining_minutes INTEGER,
-  temperature_nozzle INTEGER DEFAULT 220,
-  temperature_bed INTEGER DEFAULT 55,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-ALTER TABLE public.bf_printers ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public all on bf_printers" ON public.bf_printers;
-CREATE POLICY "Allow public all on bf_printers" ON public.bf_printers FOR ALL USING (true);
-
--- 5. Create STORE_SETTINGS table
+-- 3. STORE SETTINGS TABLE
 CREATE TABLE IF NOT EXISTS public.bf_settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
   store_name TEXT NOT NULL DEFAULT 'Blue Filament 3D Studio',
@@ -121,11 +81,26 @@ CREATE TABLE IF NOT EXISTS public.bf_settings (
 );
 
 ALTER TABLE public.bf_settings ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "Allow public all on bf_settings" ON public.bf_settings;
 CREATE POLICY "Allow public all on bf_settings" ON public.bf_settings FOR ALL USING (true);
 
--- Enable Realtime Broadcast for live syncing
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_filaments;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_printers;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_settings;
+
+-- 4. ENABLE REALTIME SYNC SAFELY
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_orders;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_filaments;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_settings;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;

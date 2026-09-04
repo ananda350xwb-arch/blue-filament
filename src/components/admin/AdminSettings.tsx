@@ -150,9 +150,23 @@ DROP POLICY IF EXISTS "Allow public all on bf_settings" ON public.bf_settings;
 CREATE POLICY "Allow public all on bf_settings" ON public.bf_settings FOR ALL USING (true);
 
 -- Enable Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_filaments;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_settings;`;
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_orders;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_filaments;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_settings;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;`;
 
     navigator.clipboard.writeText(sqlSchema);
     setCopiedSql(true);
