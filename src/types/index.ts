@@ -60,6 +60,12 @@ export type OrderStatus =
   | 'SHIPPED'          // จัดส่งแล้ว
   | 'CANCELLED';       // ยกเลิก
 
+export type PaymentStatus = 
+  | 'UNPAID'          // ยังไม่ชำระ / รอโอนเงิน
+  | 'SLIP_SUBMITTED'   // ลูกค้าส่งสลิปแล้ว / รอตรวจ
+  | 'PAID'            // ชำระเงินแล้ว / ยืนยันยอดโอน
+  | 'REFUNDED';       // คืนเงิน
+
 export interface Order {
   orderId: string;
   modelUrl: string;
@@ -84,6 +90,16 @@ export interface Order {
   assignedPrinterId?: string;
   trackingNumber?: string;
   internalNotes?: string;
+  
+  // Customer Contact & Payment Details (สำหรับการประสานงานทาง LINE)
+  customerName?: string;
+  customerContact?: string; // LINE ID or phone
+  paymentStatus?: PaymentStatus;
+  paidAmount?: number;
+  paymentDate?: string;
+  paymentSlipUrl?: string;
+  paymentNote?: string;
+
   createdAt: string;
   updatedAt?: string;
 }

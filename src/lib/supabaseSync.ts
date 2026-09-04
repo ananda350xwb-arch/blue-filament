@@ -21,6 +21,13 @@ export function orderToDbRow(order: Order) {
     assigned_printer_id: order.assignedPrinterId,
     internal_notes: order.internalNotes,
     tracking_number: order.trackingNumber,
+    customer_name: order.customerName || null,
+    customer_contact: order.customerContact || null,
+    payment_status: order.paymentStatus || 'UNPAID',
+    paid_amount: order.paidAmount || null,
+    payment_date: order.paymentDate || null,
+    payment_slip_url: order.paymentSlipUrl || null,
+    payment_note: order.paymentNote || null,
     created_at: order.createdAt,
     updated_at: order.updatedAt || new Date().toISOString(),
   };
@@ -41,6 +48,7 @@ export function dbRowToOrder(row: any): Order {
       note: '',
       status: 'PENDING_REVIEW',
       priceStatus: 'TO BE CONFIRMED',
+      paymentStatus: 'UNPAID',
       createdAt: new Date().toISOString(),
     };
   }
@@ -74,6 +82,13 @@ export function dbRowToOrder(row: any): Order {
     assignedPrinterId: row.assigned_printer_id || undefined,
     internalNotes: row.internal_notes || undefined,
     trackingNumber: row.tracking_number || undefined,
+    customerName: row.customer_name || undefined,
+    customerContact: row.customer_contact || undefined,
+    paymentStatus: row.payment_status || 'UNPAID',
+    paidAmount: row.paid_amount ? Number(row.paid_amount) : undefined,
+    paymentDate: row.payment_date || undefined,
+    paymentSlipUrl: row.payment_slip_url || undefined,
+    paymentNote: row.payment_note || undefined,
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || undefined,
   };

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useEffect, useState } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { Order, FilamentColor, ModelPreset, PrinterFleetItem, StoreSettings, OrderStatus } from '../types';
+import { Order, FilamentColor, ModelPreset, PrinterFleetItem, StoreSettings, OrderStatus, PaymentStatus } from '../types';
 import { FILAMENT_COLORS } from '../data/filamentColors';
 import { MODEL_PRESETS } from '../data/modelPresets';
 import { INITIAL_PRINTERS, INITIAL_STORE_SETTINGS, INITIAL_DEMO_ORDERS } from '../data/initialAdminData';
@@ -229,6 +229,13 @@ export function useAdminStore() {
       internalNotes?: string;
       trackingNumber?: string;
       status?: OrderStatus;
+      customerName?: string;
+      customerContact?: string;
+      paymentStatus?: PaymentStatus;
+      paidAmount?: number;
+      paymentDate?: string;
+      paymentSlipUrl?: string;
+      paymentNote?: string;
     }
   ) => {
     const nextStatus = quoteData.status || 'CONFIRMED';
@@ -243,6 +250,13 @@ export function useAdminStore() {
           assignedPrinterId: quoteData.assignedPrinterId,
           internalNotes: quoteData.internalNotes,
           trackingNumber: quoteData.trackingNumber,
+          customerName: quoteData.customerName !== undefined ? quoteData.customerName : order.customerName,
+          customerContact: quoteData.customerContact !== undefined ? quoteData.customerContact : order.customerContact,
+          paymentStatus: quoteData.paymentStatus !== undefined ? quoteData.paymentStatus : order.paymentStatus,
+          paidAmount: quoteData.paidAmount !== undefined ? quoteData.paidAmount : order.paidAmount,
+          paymentDate: quoteData.paymentDate !== undefined ? quoteData.paymentDate : order.paymentDate,
+          paymentSlipUrl: quoteData.paymentSlipUrl !== undefined ? quoteData.paymentSlipUrl : order.paymentSlipUrl,
+          paymentNote: quoteData.paymentNote !== undefined ? quoteData.paymentNote : order.paymentNote,
           priceStatus: 'QUOTED',
           status: nextStatus,
           updatedAt: new Date().toISOString()
@@ -268,6 +282,31 @@ export function useAdminStore() {
       }));
     }
   }, [setOrders, setPrinters]);
+
+  const updateOrderPayment = useCallback((
+    orderId: string,
+    paymentStatus: PaymentStatus,
+    paidAmount?: number,
+    paymentNote?: string
+  ) => {
+    setOrders(prev => prev.map(order => {
+      if (order.orderId === orderId) {
+        const currentPrice = order.quotedPrice || 0;
+        const finalPaidAmount = paidAmount !== undefined ? paidAmount : (paymentStatus === 'PAID' ? currentPrice : order.paidAmount);
+        const updated: Order = {
+          ...order,
+          paymentStatus,
+          paidAmount: finalPaidAmount,
+          paymentDate: paymentStatus === 'PAID' || paymentStatus === 'SLIP_SUBMITTED' ? (order.paymentDate || new Date().toISOString()) : order.paymentDate,
+          paymentNote: paymentNote !== undefined ? paymentNote : order.paymentNote,
+          updatedAt: new Date().toISOString()
+        };
+        CloudDB.upsertOrder(updated);
+        return updated;
+      }
+      return order;
+    }));
+  }, [setOrders]);
 
   const deleteOrder = useCallback((orderId: string) => {
     setOrders(prev => prev.filter(o => o.orderId !== orderId));
@@ -449,6 +488,7 @@ export function useAdminStore() {
     isCloudConnected,
     updateOrderStatus,
     advanceOrderStatus,
+    updateOrderPayment,
     saveOrderQuote,
     deleteOrder,
     addCustomerOrder,

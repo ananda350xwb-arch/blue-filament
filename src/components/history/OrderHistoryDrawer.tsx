@@ -74,9 +74,21 @@ MakerWorld: ${order.modelUrl}
                     <span className="font-mono text-xs font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
                       {order.orderId}
                     </span>
-                    <span className="text-[10px] text-slate-500 font-medium">
-                      {new Date(order.createdAt).toLocaleDateString('th-TH')}
-                    </span>
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      {order.paymentStatus === 'PAID' ? (
+                        <span className="font-bold text-emerald-950 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                          ✅ ชำระแล้ว
+                        </span>
+                      ) : order.quotedPrice ? (
+                        <span className="font-bold text-blue-900 bg-blue-100 px-1.5 py-0.5 rounded border border-blue-300">
+                          ฿{order.quotedPrice.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">
+                          {new Date(order.createdAt).toLocaleDateString('th-TH')}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <h4 className="font-bold text-sm text-slate-900 truncate">

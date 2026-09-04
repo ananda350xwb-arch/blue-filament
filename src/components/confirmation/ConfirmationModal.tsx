@@ -113,9 +113,19 @@ ${order.note ? `หมายเหตุ: ${order.note}\n` : ''}
             </div>
             <div className="text-right">
               <span className="text-[10px] font-mono text-slate-500 font-bold uppercase block">PRICE</span>
-              <span className="text-xs font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-300">
-                รอตรวจสอบราคา
-              </span>
+              {order.paymentStatus === 'PAID' ? (
+                <span className="text-xs font-bold text-emerald-950 bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-300">
+                  ✅ ชำระแล้ว {order.paidAmount || order.quotedPrice ? `฿${(order.paidAmount || order.quotedPrice || 0).toLocaleString()}` : ''}
+                </span>
+              ) : order.quotedPrice ? (
+                <span className="text-xs font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded-lg border border-blue-300">
+                  ฿{order.quotedPrice.toLocaleString()} บาท
+                </span>
+              ) : (
+                <span className="text-xs font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-300">
+                  รอตรวจสอบราคา
+                </span>
+              )}
             </div>
           </div>
 

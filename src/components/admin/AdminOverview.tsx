@@ -207,8 +207,13 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                       {order.modelName || '3D Model'}
                     </h4>
 
-                    <div className="text-xs text-slate-500">
-                      {order.colorCount} สี • {order.quantity} ชิ้น • สเกล {order.scale}%
+                    <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
+                      {order.customerName && (
+                        <span className="font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 text-[11px]">
+                          👤 {order.customerName}
+                        </span>
+                      )}
+                      <span>{order.colorCount} สี • {order.quantity} ชิ้น • สเกล {order.scale}%</span>
                     </div>
                   </div>
 

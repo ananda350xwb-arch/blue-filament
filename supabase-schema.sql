@@ -22,9 +22,25 @@ CREATE TABLE IF NOT EXISTS public.bf_orders (
   assigned_printer_id TEXT,
   internal_notes TEXT,
   tracking_number TEXT,
+  customer_name TEXT,
+  customer_contact TEXT,
+  payment_status TEXT NOT NULL DEFAULT 'UNPAID',
+  paid_amount NUMERIC,
+  payment_date TIMESTAMPTZ,
+  payment_slip_url TEXT,
+  payment_note TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Upgrade existing table if columns don't exist yet
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS customer_contact TEXT;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'UNPAID';
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS paid_amount NUMERIC;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_date TIMESTAMPTZ;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_slip_url TEXT;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_note TEXT;
 
 ALTER TABLE public.bf_orders ENABLE ROW LEVEL SECURITY;
 

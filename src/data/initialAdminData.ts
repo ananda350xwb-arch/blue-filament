@@ -75,6 +75,12 @@ export const INITIAL_DEMO_ORDERS: Order[] = [
     estimatedGrams: 85,
     estimatedPrintTimeHours: 3.5,
     assignedPrinterId: 'printer-1',
+    customerName: 'คุณภานุวัฒน์ (นนท์)',
+    customerContact: 'LINE: non_panuwat',
+    paymentStatus: 'PAID',
+    paidAmount: 280,
+    paymentDate: new Date(Date.now() - 3600000 * 3.8).toISOString(),
+    paymentNote: 'โอนผ่าน KBank เรียบร้อย สลิปตรงยอด',
     createdAt: new Date(Date.now() - 3600000 * 4).toISOString()
   },
   {
@@ -92,11 +98,16 @@ export const INITIAL_DEMO_ORDERS: Order[] = [
     infill: 'strong',
     note: 'เจาะรูร้อยห่วงพวงกุญแจให้ด้วยครับ',
     priceStatus: 'QUOTED',
-    status: 'PRINTING',
+    status: 'CONFIRMED',
     quotedPrice: 160,
     estimatedGrams: 35,
     estimatedPrintTimeHours: 1.2,
-    assignedPrinterId: 'printer-3',
+    customerName: 'คุณธิดารัตน์',
+    customerContact: 'LINE: may_thida (089-123-4567)',
+    paymentStatus: 'SLIP_SUBMITTED',
+    paidAmount: 160,
+    paymentDate: new Date(Date.now() - 3600000 * 2).toISOString(),
+    paymentNote: 'ส่งสลิป PromptPay ใน LINE แล้ว รอแอดมินเริ่มพิมพ์',
     createdAt: new Date(Date.now() - 3600000 * 8).toISOString()
   },
   {
@@ -115,6 +126,9 @@ export const INITIAL_DEMO_ORDERS: Order[] = [
     note: 'ตั้งใจเอาไว้ใส่แคคตัสต้นจริง ขอแบบกันน้ำซึมหน่อยครับ',
     priceStatus: 'TO BE CONFIRMED',
     status: 'PENDING_REVIEW',
+    customerName: 'คุณกิตติศักดิ์',
+    customerContact: 'LINE: kittisak_3d',
+    paymentStatus: 'UNPAID',
     createdAt: new Date(Date.now() - 3600000 * 1).toISOString()
   }
 ];
