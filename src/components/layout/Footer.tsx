@@ -89,6 +89,14 @@ export const Footer: React.FC<{ onOpenOrderFlow: () => void }> = ({ onOpenOrderF
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </li>
+              <li className="pt-2">
+                <a
+                  href="/admin"
+                  className="text-xs text-slate-300 hover:text-white transition-colors inline-flex items-center gap-1"
+                >
+                  <span>⚙️ ระบบหลังบ้าน (Admin)</span>
+                </a>
+              </li>
             </ul>
           </div>
 
