@@ -200,6 +200,39 @@ ${trackingNo ? `🚚 เลขพัสดุ: ${trackingNo}\n` : ''}
             </button>
           </div>
 
+          {/* Quick Presets for weight and time */}
+          <div className="space-y-1.5 bg-blue-50/70 p-3 rounded-2xl border border-blue-100">
+            <span className="text-[11px] font-bold text-blue-900 block">⚡ ค่าประมาณด่วนตามประเภทชิ้นงาน:</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {[
+                { label: 'พวงกุญแจ/ชิ้นเล็ก', g: 25, h: 1.5 },
+                { label: 'ฟิกเกอร์/ของเล่น', g: 60, h: 3.5 },
+                { label: 'ที่วาง/กล่องขนาดกลาง', g: 150, h: 6.5 },
+                { label: 'แจกัน/ชิ้นงานใหญ่', g: 300, h: 12.0 },
+              ].map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setGrams(preset.g);
+                    setHours(preset.h);
+                    const materialCost = preset.g * settings.basePricePerGram;
+                    const timeCost = preset.h * 25;
+                    const multiColorCost = Math.max(0, order.colorCount - 1) * settings.amsColorChangeFee;
+                    const subtotal = (materialCost + timeCost + multiColorCost) * order.quantity;
+                    const total = Math.round(subtotal + settings.shippingFlatRate);
+                    setPrice(total);
+                    onShowToast(`เลือกโปรไฟล์: ${preset.label}`, `น้ำหนัก ${preset.g}g • เวลา ${preset.h}ชม. • ราคาแนะนำ ฿${total}`, 'info');
+                  }}
+                  className="bg-white hover:bg-blue-600 hover:text-white text-slate-700 border border-blue-200 rounded-xl px-2 py-1.5 text-[11px] font-bold transition-all shadow-sm flex flex-col items-center cursor-pointer"
+                >
+                  <span>{preset.label}</span>
+                  <span className="text-[10px] opacity-75 font-mono">{preset.g}g • {preset.h}h</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Weight Grams */}
             <div className="space-y-1">

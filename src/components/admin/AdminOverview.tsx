@@ -20,6 +20,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   onOpenAddFilament,
 }) => {
   const pendingOrders = orders.filter(o => o.status === 'PENDING_REVIEW');
+  const lowStockFilaments = filaments.filter(f => !f.inStock || (f.remainingGrams !== undefined && f.remainingGrams < 100));
 
   const totalRevenue = orders.reduce((sum, o) => sum + (o.quotedPrice || 0), 0);
   const activePrintersCount = printers.filter(p => p.status === 'printing').length;
@@ -49,6 +50,33 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Low Stock Warning Banner if any */}
+      {lowStockFilaments.length > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-lg flex-shrink-0">
+              ⚠️
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-amber-950">
+                แจ้งเตือนสต็อก Filament ใกล้หมด ({lowStockFilaments.length} สี)
+              </h4>
+              <p className="text-xs text-amber-800">
+                {lowStockFilaments.map(f => `${f.nameTh} (${f.remainingGrams || 0}g)`).slice(0, 4).join(', ')}
+                {lowStockFilaments.length > 4 ? ' และอื่นๆ' : ''}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigateTab('filaments')}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            เติมสต็อกสี →
+          </button>
+        </div>
+      )}
 
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Order, FilamentColor, ModelPreset, PrinterFleetItem, StoreSettings, OrderStatus } from '../types';
 import { FILAMENT_COLORS } from '../data/filamentColors';
@@ -12,19 +12,112 @@ export function useAdminStore() {
   const [printers, setPrinters] = useLocalStorage<PrinterFleetItem[]>('blue_filament_printers', INITIAL_PRINTERS);
   const [settings, setSettings] = useLocalStorage<StoreSettings>('blue_filament_settings', INITIAL_STORE_SETTINGS);
 
+  // --- FILAMENT DEDUCTION HELPER ---
+  const deductOrderFilament = useCallback((order: Order) => {
+    const totalGrams = (order.estimatedGrams || 50) * order.quantity;
+    const colorsCount = Math.max(1, order.colors.length);
+    const gramsPerColor = Math.round(totalGrams / colorsCount);
+
+    setFilaments(prevFilaments => {
+      return prevFilaments.map(fil => {
+        // Check if this filament was used in the order
+        const wasUsed = order.colors.some(c => 
+          c.storeColor.toLowerCase().includes(fil.nameTh.toLowerCase()) || 
+          c.storeColor.toLowerCase().includes(fil.name.toLowerCase()) ||
+          c.hex.toLowerCase() === fil.hex.toLowerCase()
+        );
+
+        if (wasUsed) {
+          const currentRemaining = fil.remainingGrams ?? 1000;
+          const newRemaining = Math.max(0, currentRemaining - gramsPerColor);
+          return {
+            ...fil,
+            remainingGrams: newRemaining,
+            inStock: newRemaining > 20 // Auto mark out of stock if less than 20g
+          };
+        }
+        return fil;
+      });
+    });
+  }, [setFilaments]);
+
   // --- ORDER ACTIONS ---
-  const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {
+  const updateOrderStatus = useCallback((orderId: string, status: OrderStatus, trackingNumber?: string) => {
+    let targetOrder: Order | undefined;
+
     setOrders(prev => prev.map(order => {
       if (order.orderId === orderId) {
-        return {
+        targetOrder = {
           ...order,
           status,
+          trackingNumber: trackingNumber || order.trackingNumber,
           updatedAt: new Date().toISOString()
         };
+        return targetOrder;
       }
       return order;
     }));
-  }, [setOrders]);
+
+    if (targetOrder) {
+      // 1. Printer management based on status
+      if (status === 'PRINTING' && targetOrder.assignedPrinterId) {
+        setPrinters(prev => prev.map(p => {
+          if (p.id === targetOrder?.assignedPrinterId) {
+            return {
+              ...p,
+              status: 'printing',
+              currentOrderId: orderId,
+              currentOrderName: targetOrder?.modelName || '3D Model',
+              progressPercent: 15,
+              timeRemainingMinutes: Math.round((targetOrder?.estimatedPrintTimeHours || 2) * 60)
+            };
+          }
+          return p;
+        }));
+      } else if (status === 'COMPLETED' || status === 'SHIPPED' || status === 'CANCELLED') {
+        // Free up assigned printer if it was printing this order
+        setPrinters(prev => prev.map(p => {
+          if (p.currentOrderId === orderId) {
+            return {
+              ...p,
+              status: 'idle',
+              currentOrderId: undefined,
+              currentOrderName: undefined,
+              progressPercent: 0,
+              timeRemainingMinutes: undefined
+            };
+          }
+          return p;
+        }));
+
+        // Deduct filament inventory on completion
+        if (status === 'COMPLETED') {
+          deductOrderFilament(targetOrder);
+        }
+      }
+    }
+  }, [setOrders, setPrinters, deductOrderFilament]);
+
+  // Advance to next logical stage
+  const advanceOrderStatus = useCallback((orderId: string) => {
+    const order = orders.find(o => o.orderId === orderId);
+    if (!order) return;
+
+    switch (order.status) {
+      case 'PENDING_REVIEW':
+        updateOrderStatus(orderId, 'CONFIRMED');
+        break;
+      case 'CONFIRMED':
+        updateOrderStatus(orderId, 'PRINTING');
+        break;
+      case 'PRINTING':
+        updateOrderStatus(orderId, 'COMPLETED');
+        break;
+      case 'COMPLETED':
+        updateOrderStatus(orderId, 'SHIPPED');
+        break;
+    }
+  }, [orders, updateOrderStatus]);
 
   const saveOrderQuote = useCallback((
     orderId: string,
@@ -38,6 +131,8 @@ export function useAdminStore() {
       status?: OrderStatus;
     }
   ) => {
+    const nextStatus = quoteData.status || 'CONFIRMED';
+
     setOrders(prev => prev.map(order => {
       if (order.orderId === orderId) {
         return {
@@ -49,22 +144,22 @@ export function useAdminStore() {
           internalNotes: quoteData.internalNotes,
           trackingNumber: quoteData.trackingNumber,
           priceStatus: 'QUOTED',
-          status: quoteData.status || (order.status === 'PENDING_REVIEW' ? 'CONFIRMED' : order.status),
+          status: nextStatus,
           updatedAt: new Date().toISOString()
         };
       }
       return order;
     }));
 
-    // If assigned to a printer, update printer job
+    // Update printer fleet if assigned
     if (quoteData.assignedPrinterId) {
       setPrinters(prev => prev.map(printer => {
         if (printer.id === quoteData.assignedPrinterId) {
           return {
             ...printer,
-            status: 'printing',
+            status: nextStatus === 'PRINTING' ? 'printing' : printer.status,
             currentOrderId: orderId,
-            progressPercent: 10,
+            progressPercent: nextStatus === 'PRINTING' ? 10 : printer.progressPercent,
             timeRemainingMinutes: Math.round((quoteData.estimatedPrintTimeHours || 2) * 60)
           };
         }
@@ -75,7 +170,20 @@ export function useAdminStore() {
 
   const deleteOrder = useCallback((orderId: string) => {
     setOrders(prev => prev.filter(o => o.orderId !== orderId));
-  }, [setOrders]);
+    // Also release any printer that had this order
+    setPrinters(prev => prev.map(p => {
+      if (p.currentOrderId === orderId) {
+        return {
+          ...p,
+          status: 'idle',
+          currentOrderId: undefined,
+          currentOrderName: undefined,
+          progressPercent: 0
+        };
+      }
+      return p;
+    }));
+  }, [setOrders, setPrinters]);
 
   const addCustomerOrder = useCallback((newOrder: Order) => {
     setOrders(prev => [newOrder, ...prev.filter(o => o.orderId !== newOrder.orderId)]);
@@ -99,7 +207,7 @@ export function useAdminStore() {
   }, [setFilaments]);
 
   const updateFilamentGrams = useCallback((id: string, grams: number) => {
-    setFilaments(prev => prev.map(f => (f.id === id ? { ...f, remainingGrams: grams } : f)));
+    setFilaments(prev => prev.map(f => (f.id === id ? { ...f, remainingGrams: grams, inStock: grams > 20 } : f)));
   }, [setFilaments]);
 
   // --- MODEL PRESET ACTIONS ---
@@ -152,7 +260,7 @@ export function useAdminStore() {
 
   const exportDataJson = useCallback(() => {
     return JSON.stringify({
-      version: '1.0.0',
+      version: '1.2.0',
       exportedAt: new Date().toISOString(),
       orders,
       filaments,
@@ -165,16 +273,33 @@ export function useAdminStore() {
   const importDataJson = useCallback((jsonString: string) => {
     try {
       const data = JSON.parse(jsonString);
-      if (data.orders) setOrders(data.orders);
-      if (data.filaments) setFilaments(data.filaments);
-      if (data.modelPresets) setModelPresets(data.modelPresets);
-      if (data.printers) setPrinters(data.printers);
-      if (data.settings) setSettings(data.settings);
-      return { success: true, message: 'นำเข้าข้อมูลระบบสำเร็จ!' };
+      if (data.orders && Array.isArray(data.orders)) setOrders(data.orders);
+      if (data.filaments && Array.isArray(data.filaments)) setFilaments(data.filaments);
+      if (data.modelPresets && Array.isArray(data.modelPresets)) setModelPresets(data.modelPresets);
+      if (data.printers && Array.isArray(data.printers)) setPrinters(data.printers);
+      if (data.settings && typeof data.settings === 'object') setSettings(data.settings);
+      return { success: true, message: 'นำเข้าข้อมูลระบบและอัปเดตสถานะสำเร็จ 100%!' };
     } catch (e: any) {
       return { success: false, message: `ไฟล์ JSON ไม่ถูกต้อง: ${e.message}` };
     }
   }, [setOrders, setFilaments, setModelPresets, setPrinters, setSettings]);
+
+  // --- COMPUTED ANALYTICS ---
+  const analytics = useMemo(() => {
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.quotedPrice || 0), 0);
+    const pendingReviewCount = orders.filter(o => o.status === 'PENDING_REVIEW').length;
+    const printingCount = orders.filter(o => o.status === 'PRINTING').length;
+    const completedCount = orders.filter(o => o.status === 'COMPLETED' || o.status === 'SHIPPED').length;
+    const lowStockFilaments = filaments.filter(f => (f.remainingGrams !== undefined && f.remainingGrams < 100) || !f.inStock);
+
+    return {
+      totalRevenue,
+      pendingReviewCount,
+      printingCount,
+      completedCount,
+      lowStockFilaments
+    };
+  }, [orders, filaments]);
 
   return {
     orders,
@@ -182,7 +307,9 @@ export function useAdminStore() {
     modelPresets,
     printers,
     settings,
+    analytics,
     updateOrderStatus,
+    advanceOrderStatus,
     saveOrderQuote,
     deleteOrder,
     addCustomerOrder,
