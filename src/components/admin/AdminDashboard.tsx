@@ -46,7 +46,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExitAdmin, onS
     deleteModelPreset,
     updatePrinterStatus,
     updateSettings,
-    seedDemoOrders,
+    clearAllOrders,
     resetToDefaults,
     exportDataJson,
     importDataJson,
@@ -164,7 +164,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExitAdmin, onS
               onUpdateStatus={updateOrderStatus}
               onUpdatePaymentStatus={updateOrderPayment}
               onDeleteOrder={deleteOrder}
-              onSeedDemoOrders={seedDemoOrders}
               onGoToStorefront={onExitAdmin}
               onShowToast={onShowToast}
             />
@@ -205,6 +204,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExitAdmin, onS
               onUpdateSettings={updateSettings}
               onExportData={exportDataJson}
               onImportData={importDataJson}
+              onClearAllOrders={clearAllOrders}
               onResetDefaults={resetToDefaults}
               onShowToast={onShowToast}
             />

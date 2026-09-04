@@ -419,6 +419,11 @@ export function useAdminStore() {
   }, [setSettings]);
 
   // --- BACKUP & RESET ---
+  const clearAllOrders = useCallback(async () => {
+    setOrders([]);
+    await CloudDB.clearAllOrders();
+  }, [setOrders]);
+
   const seedDemoOrders = useCallback(async () => {
     setOrders(INITIAL_DEMO_ORDERS);
     for (const ord of INITIAL_DEMO_ORDERS) {
@@ -426,8 +431,9 @@ export function useAdminStore() {
     }
   }, [setOrders]);
 
-  const resetToDefaults = useCallback(() => {
-    setOrders(INITIAL_DEMO_ORDERS);
+  const resetToDefaults = useCallback(async () => {
+    setOrders([]);
+    await CloudDB.clearAllOrders();
     setFilaments(FILAMENT_COLORS);
     setModelPresets(MODEL_PRESETS);
     setPrinters(INITIAL_PRINTERS);
@@ -502,6 +508,7 @@ export function useAdminStore() {
     deleteModelPreset,
     updatePrinterStatus,
     updateSettings,
+    clearAllOrders,
     seedDemoOrders,
     resetToDefaults,
     exportDataJson,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Download, Upload, RotateCcw, ShieldCheck, Megaphone, DollarSign, MessageCircle, Cloud, Database, CheckCircle2, AlertCircle, Copy, ExternalLink } from 'lucide-react';
+import { Save, Download, Upload, RotateCcw, ShieldCheck, Megaphone, DollarSign, MessageCircle, Cloud, Database, CheckCircle2, AlertCircle, Copy, ExternalLink, Trash2 } from 'lucide-react';
 import { StoreSettings } from '../../types';
 import { getSupabaseConfig, saveSupabaseConfig, clearSupabaseConfig, testSupabaseConnection } from '../../lib/supabase';
 
@@ -8,6 +8,7 @@ interface AdminSettingsProps {
   onUpdateSettings: (newSettings: Partial<StoreSettings>) => void;
   onExportData: () => string;
   onImportData: (json: string) => { success: boolean; message: string };
+  onClearAllOrders?: () => Promise<void> | void;
   onResetDefaults: () => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -17,6 +18,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   onUpdateSettings,
   onExportData,
   onImportData,
+  onClearAllOrders,
   onResetDefaults,
   onShowToast,
 }) => {
@@ -94,9 +96,25 @@ CREATE TABLE IF NOT EXISTS public.bf_orders (
   assigned_printer_id TEXT,
   internal_notes TEXT,
   tracking_number TEXT,
+  customer_name TEXT,
+  customer_contact TEXT,
+  payment_status TEXT NOT NULL DEFAULT 'UNPAID',
+  paid_amount NUMERIC,
+  payment_date TIMESTAMPTZ,
+  payment_slip_url TEXT,
+  payment_note TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Upgrade existing table if columns don't exist yet
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS customer_contact TEXT;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'UNPAID';
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS paid_amount NUMERIC;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_date TIMESTAMPTZ;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_slip_url TEXT;
+ALTER TABLE public.bf_orders ADD COLUMN IF NOT EXISTS payment_note TEXT;
 
 ALTER TABLE public.bf_orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read access to bf_orders" ON public.bf_orders;
@@ -508,11 +526,29 @@ END $$;`;
             <span>นำเข้าข้อมูล (Import JSON)</span>
           </button>
 
+          {/* Clear All Orders */}
+          {onClearAllOrders && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (window.confirm('คุณต้องการลบรายการออเดอร์ทั้งหมดในระบบเพื่อเตรียมเปิดใช้งานจริงใช่หรือไม่?\n\n(ออเดอร์ในเครื่องและบน Supabase Cloud จะถูกเคลียร์ทั้งหมด)')) {
+                  await onClearAllOrders();
+                  onShowToast('ลบรายการออเดอร์ทั้งหมดสำเร็จ!', 'ระบบพร้อมรับออเดอร์จริงจากลูกค้า 100%', 'success');
+                }
+              }}
+              className="px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+              title="ลบออเดอร์ทั้งหมดเพื่อเตรียมเปิดร้านจริง"
+            >
+              <Trash2 className="w-4 h-4 text-amber-600" />
+              <span>ล้างออเดอร์ทั้งหมด (Clear All Orders)</span>
+            </button>
+          )}
+
           {/* Factory Reset */}
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('คำเตือน: คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับสู่ค่าเริ่มต้นใช่หรือไม่?')) {
+              if (window.confirm('คำเตือน: คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับสู่ค่าเริ่มต้นสำหรับใช้งานจริงใช่หรือไม่?')) {
                 onResetDefaults();
                 onShowToast('รีเซ็ตข้อมูลระบบกลับสู่ค่าเริ่มต้นเรียบร้อย!', undefined, 'info');
                 window.location.reload();

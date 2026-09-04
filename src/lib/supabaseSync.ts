@@ -191,6 +191,19 @@ export const CloudDB = {
     }
   },
 
+  async clearAllOrders(): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      const { error } = await client.from('bf_orders').delete().neq('order_id', '');
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.warn('CloudDB.clearAllOrders error:', e);
+      return false;
+    }
+  },
+
   // Filaments
   async fetchFilaments(): Promise<FilamentColor[] | null> {
     const client = getSupabaseClient();

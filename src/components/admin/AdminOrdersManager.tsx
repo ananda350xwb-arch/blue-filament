@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Clock, CheckCircle2, Printer, Package, Truck, XCircle, Trash2, Edit3, ExternalLink, MessageCircle, Play, Check, Sparkles, Database, ShoppingCart, RefreshCw, CreditCard, User, FileText } from 'lucide-react';
+import { Search, Clock, CheckCircle2, Printer, Package, Truck, XCircle, Trash2, Edit3, ExternalLink, MessageCircle, Play, Check, Database, ShoppingCart, RefreshCw, CreditCard, User, FileText } from 'lucide-react';
 import { Order, OrderStatus, PaymentStatus } from '../../types';
 
 interface AdminOrdersManagerProps {
@@ -8,7 +8,6 @@ interface AdminOrdersManagerProps {
   onUpdateStatus?: (orderId: string, status: OrderStatus, trackingNumber?: string) => void;
   onUpdatePaymentStatus?: (orderId: string, paymentStatus: PaymentStatus, paidAmount?: number, paymentNote?: string) => void;
   onDeleteOrder: (orderId: string) => void;
-  onSeedDemoOrders?: () => Promise<void> | void;
   onGoToStorefront?: () => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -19,14 +18,12 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
   onUpdateStatus,
   onUpdatePaymentStatus,
   onDeleteOrder,
-  onSeedDemoOrders,
   onGoToStorefront,
   onShowToast,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSeeding, setIsSeeding] = useState(false);
 
   const safeOrders = Array.isArray(orders) ? orders : [];
 
@@ -60,19 +57,6 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
   const unpaidCount = safeOrders.filter(o => (o?.paymentStatus || 'UNPAID') === 'UNPAID').length;
   const slipCount = safeOrders.filter(o => o?.paymentStatus === 'SLIP_SUBMITTED').length;
   const paidCount = safeOrders.filter(o => o?.paymentStatus === 'PAID').length;
-
-  const handleSeedOrders = async () => {
-    if (!onSeedDemoOrders) return;
-    setIsSeeding(true);
-    try {
-      await onSeedDemoOrders();
-      onShowToast('โหลดออเดอร์ตัวอย่าง 3 รายการสำเร็จ!', 'ข้อมูลซิงค์ขึ้น Supabase Cloud เรียบร้อยแล้ว', 'success');
-    } catch {
-      onShowToast('เกิดข้อผิดพลาดในการโหลดข้อมูลตัวอย่าง', undefined, 'error');
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -188,22 +172,9 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
         </div>
 
         {/* Actions & Search */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          {onSeedDemoOrders && (
-            <button
-              type="button"
-              onClick={handleSeedOrders}
-              disabled={isSeeding}
-              className="btn-3d-secondary px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-800 hover:text-blue-600 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 disabled:opacity-50"
-              title="โหลดออเดอร์ตัวอย่าง 3 รายการเพื่อทดสอบระบบ"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>{isSeeding ? 'กำลังซิงค์...' : 'โหลดออเดอร์ตัวอย่าง'}</span>
-            </button>
-          )}
-
+        <div className="flex items-center gap-2.5">
           {/* Search Bar */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <input
               type="text"
               value={searchQuery}
@@ -307,34 +278,22 @@ ${order.trackingNumber ? `🚚 เลขพัสดุ: ${order.trackingNumber}
 
             <div className="max-w-md mx-auto space-y-2">
               <h3 className="font-display font-black text-xl text-slate-900">
-                ยังไม่มีรายการสั่งพิมพ์ในระบบ
+                ระบบพร้อมรับออเดอร์งานพิมพ์ 3D จริง
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                เมื่อลูกค้ากดสั่งพิมพ์จากหน้าร้าน (บนโทรศัพท์มือถือ หรือคอมพิวเตอร์) ระบบจะส่งออเดอร์เข้ามาที่นี่อัตโนมัติแบบ Real-time ผ่าน Supabase Cloud
+                เมื่อลูกค้ากดสั่งพิมพ์จากหน้าร้าน (บนโทรศัพท์มือถือ หรือคอมพิวเตอร์) ระบบจะส่งออเดอร์เข้ามาที่นี่อัตโนมัติแบบ Real-time พร้อมให้คุณคำนวณราคาและตอบกลับ LINE ได้ทันที
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              {onSeedDemoOrders && (
-                <button
-                  type="button"
-                  onClick={handleSeedOrders}
-                  disabled={isSeeding}
-                  className="btn-3d-blue w-full sm:w-auto px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white shadow-3d-blue flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <Sparkles className="w-4 h-4 text-yellow-300" />
-                  <span>{isSeeding ? 'กำลังบันทึกข้อมูล...' : '⚡ โหลดออเดอร์ตัวอย่าง 3 รายการ'}</span>
-                </button>
-              )}
-
               {onGoToStorefront && (
                 <button
                   type="button"
                   onClick={onGoToStorefront}
-                  className="btn-3d-secondary w-full sm:w-auto px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 hover:text-blue-600 flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-all active:scale-95"
+                  className="btn-3d-blue w-full sm:w-auto px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white shadow-3d-blue flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
                 >
-                  <ShoppingCart className="w-4 h-4 text-blue-600" />
-                  <span>🛒 ไปที่หน้าร้านเพื่อทดลองสั่งพิมพ์</span>
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>🛒 ไปที่หน้าร้าน (เปิดดูหน้าจอที่ลูกค้าเห็น)</span>
                 </button>
               )}
             </div>
