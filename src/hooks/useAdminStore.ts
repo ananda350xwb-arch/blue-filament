@@ -1,9 +1,11 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useState } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Order, FilamentColor, ModelPreset, PrinterFleetItem, StoreSettings, OrderStatus } from '../types';
 import { FILAMENT_COLORS } from '../data/filamentColors';
 import { MODEL_PRESETS } from '../data/modelPresets';
 import { INITIAL_PRINTERS, INITIAL_STORE_SETTINGS, INITIAL_DEMO_ORDERS } from '../data/initialAdminData';
+import { CloudDB, dbRowToOrder, dbRowToFilament } from '../lib/supabaseSync';
+import { getSupabaseClient, getSupabaseConfig } from '../lib/supabase';
 
 export function useAdminStore() {
   const [orders, setOrders] = useLocalStorage<Order[]>('blue_filament_orders', INITIAL_DEMO_ORDERS);
@@ -12,6 +14,105 @@ export function useAdminStore() {
   const [printers, setPrinters] = useLocalStorage<PrinterFleetItem[]>('blue_filament_printers', INITIAL_PRINTERS);
   const [settings, setSettings] = useLocalStorage<StoreSettings>('blue_filament_settings', INITIAL_STORE_SETTINGS);
 
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(() => getSupabaseConfig().connected);
+
+  // --- INITIAL CLOUD DATA FETCH & REALTIME SUBSCRIPTION ---
+  useEffect(() => {
+    let activeChannel: any = null;
+
+    const initCloud = async () => {
+      const client = getSupabaseClient();
+      if (!client) {
+        setIsCloudConnected(false);
+        return;
+      }
+
+      setIsCloudConnected(true);
+
+      // 1. Initial Cloud Sync
+      try {
+        const cloudOrders = await CloudDB.fetchOrders();
+        if (cloudOrders && cloudOrders.length > 0) {
+          setOrders(cloudOrders);
+        }
+
+        const cloudFilaments = await CloudDB.fetchFilaments();
+        if (cloudFilaments && cloudFilaments.length > 0) {
+          setFilaments(cloudFilaments);
+        }
+
+        const cloudSettings = await CloudDB.fetchSettings();
+        if (cloudSettings) {
+          setSettings(cloudSettings);
+        }
+      } catch (err) {
+        console.warn('Initial Supabase sync notice:', err);
+      }
+
+      // 2. Realtime Listener for instant cross-device live updates
+      try {
+        activeChannel = client
+          .channel('blue-filament-realtime')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'bf_orders' },
+            (payload) => {
+              if (payload.eventType === 'INSERT') {
+                const newOrd = dbRowToOrder(payload.new);
+                setOrders(prev => [newOrd, ...prev.filter(o => o.orderId !== newOrd.orderId)]);
+              } else if (payload.eventType === 'UPDATE') {
+                const updatedOrd = dbRowToOrder(payload.new);
+                setOrders(prev => prev.map(o => o.orderId === updatedOrd.orderId ? updatedOrd : o));
+              } else if (payload.eventType === 'DELETE') {
+                const deletedId = (payload.old as any).order_id;
+                if (deletedId) {
+                  setOrders(prev => prev.filter(o => o.orderId !== deletedId));
+                }
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'bf_filaments' },
+            (payload) => {
+              if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                const updatedFil = dbRowToFilament(payload.new);
+                setFilaments(prev => {
+                  const exists = prev.some(f => f.id === updatedFil.id);
+                  if (exists) {
+                    return prev.map(f => f.id === updatedFil.id ? updatedFil : f);
+                  }
+                  return [updatedFil, ...prev];
+                });
+              } else if (payload.eventType === 'DELETE') {
+                const deletedId = (payload.old as any).id;
+                if (deletedId) {
+                  setFilaments(prev => prev.filter(f => f.id !== deletedId));
+                }
+              }
+            }
+          )
+          .subscribe();
+      } catch (subErr) {
+        console.warn('Supabase realtime subscribe warning:', subErr);
+      }
+    };
+
+    initCloud();
+
+    const handleConfigChange = () => {
+      initCloud();
+    };
+    window.addEventListener('blue_filament_supabase_config_updated', handleConfigChange);
+
+    return () => {
+      window.removeEventListener('blue_filament_supabase_config_updated', handleConfigChange);
+      if (activeChannel && getSupabaseClient()) {
+        getSupabaseClient()?.removeChannel(activeChannel);
+      }
+    };
+  }, [setOrders, setFilaments, setSettings]);
+
   // --- FILAMENT DEDUCTION HELPER ---
   const deductOrderFilament = useCallback((order: Order) => {
     const totalGrams = (order.estimatedGrams || 50) * order.quantity;
@@ -19,8 +120,7 @@ export function useAdminStore() {
     const gramsPerColor = Math.round(totalGrams / colorsCount);
 
     setFilaments(prevFilaments => {
-      return prevFilaments.map(fil => {
-        // Check if this filament was used in the order
+      const updatedList = prevFilaments.map(fil => {
         const wasUsed = order.colors.some(c => 
           c.storeColor.toLowerCase().includes(fil.nameTh.toLowerCase()) || 
           c.storeColor.toLowerCase().includes(fil.name.toLowerCase()) ||
@@ -30,14 +130,17 @@ export function useAdminStore() {
         if (wasUsed) {
           const currentRemaining = fil.remainingGrams ?? 1000;
           const newRemaining = Math.max(0, currentRemaining - gramsPerColor);
-          return {
+          const updated = {
             ...fil,
             remainingGrams: newRemaining,
-            inStock: newRemaining > 20 // Auto mark out of stock if less than 20g
+            inStock: newRemaining > 20
           };
+          CloudDB.upsertFilament(updated);
+          return updated;
         }
         return fil;
       });
+      return updatedList;
     });
   }, [setFilaments]);
 
@@ -53,13 +156,13 @@ export function useAdminStore() {
           trackingNumber: trackingNumber || order.trackingNumber,
           updatedAt: new Date().toISOString()
         };
+        CloudDB.upsertOrder(targetOrder);
         return targetOrder;
       }
       return order;
     }));
 
     if (targetOrder) {
-      // 1. Printer management based on status
       if (status === 'PRINTING' && targetOrder.assignedPrinterId) {
         setPrinters(prev => prev.map(p => {
           if (p.id === targetOrder?.assignedPrinterId) {
@@ -75,7 +178,6 @@ export function useAdminStore() {
           return p;
         }));
       } else if (status === 'COMPLETED' || status === 'SHIPPED' || status === 'CANCELLED') {
-        // Free up assigned printer if it was printing this order
         setPrinters(prev => prev.map(p => {
           if (p.currentOrderId === orderId) {
             return {
@@ -90,7 +192,6 @@ export function useAdminStore() {
           return p;
         }));
 
-        // Deduct filament inventory on completion
         if (status === 'COMPLETED') {
           deductOrderFilament(targetOrder);
         }
@@ -98,7 +199,6 @@ export function useAdminStore() {
     }
   }, [setOrders, setPrinters, deductOrderFilament]);
 
-  // Advance to next logical stage
   const advanceOrderStatus = useCallback((orderId: string) => {
     const order = orders.find(o => o.orderId === orderId);
     if (!order) return;
@@ -135,7 +235,7 @@ export function useAdminStore() {
 
     setOrders(prev => prev.map(order => {
       if (order.orderId === orderId) {
-        return {
+        const updated: Order = {
           ...order,
           quotedPrice: quoteData.quotedPrice,
           estimatedGrams: quoteData.estimatedGrams,
@@ -147,11 +247,12 @@ export function useAdminStore() {
           status: nextStatus,
           updatedAt: new Date().toISOString()
         };
+        CloudDB.upsertOrder(updated);
+        return updated;
       }
       return order;
     }));
 
-    // Update printer fleet if assigned
     if (quoteData.assignedPrinterId) {
       setPrinters(prev => prev.map(printer => {
         if (printer.id === quoteData.assignedPrinterId) {
@@ -170,7 +271,8 @@ export function useAdminStore() {
 
   const deleteOrder = useCallback((orderId: string) => {
     setOrders(prev => prev.filter(o => o.orderId !== orderId));
-    // Also release any printer that had this order
+    CloudDB.deleteOrder(orderId);
+
     setPrinters(prev => prev.map(p => {
       if (p.currentOrderId === orderId) {
         return {
@@ -187,27 +289,51 @@ export function useAdminStore() {
 
   const addCustomerOrder = useCallback((newOrder: Order) => {
     setOrders(prev => [newOrder, ...prev.filter(o => o.orderId !== newOrder.orderId)]);
+    CloudDB.upsertOrder(newOrder);
   }, [setOrders]);
 
   // --- FILAMENT ACTIONS ---
   const addFilament = useCallback((newFilament: FilamentColor) => {
     setFilaments(prev => [newFilament, ...prev]);
+    CloudDB.upsertFilament(newFilament);
   }, [setFilaments]);
 
   const updateFilament = useCallback((id: string, updatedFields: Partial<FilamentColor>) => {
-    setFilaments(prev => prev.map(f => (f.id === id ? { ...f, ...updatedFields } : f)));
+    setFilaments(prev => prev.map(f => {
+      if (f.id === id) {
+        const updated = { ...f, ...updatedFields };
+        CloudDB.upsertFilament(updated);
+        return updated;
+      }
+      return f;
+    }));
   }, [setFilaments]);
 
   const deleteFilament = useCallback((id: string) => {
     setFilaments(prev => prev.filter(f => f.id !== id));
+    CloudDB.deleteFilament(id);
   }, [setFilaments]);
 
   const toggleFilamentStock = useCallback((id: string) => {
-    setFilaments(prev => prev.map(f => (f.id === id ? { ...f, inStock: !f.inStock } : f)));
+    setFilaments(prev => prev.map(f => {
+      if (f.id === id) {
+        const updated = { ...f, inStock: !f.inStock };
+        CloudDB.upsertFilament(updated);
+        return updated;
+      }
+      return f;
+    }));
   }, [setFilaments]);
 
   const updateFilamentGrams = useCallback((id: string, grams: number) => {
-    setFilaments(prev => prev.map(f => (f.id === id ? { ...f, remainingGrams: grams, inStock: grams > 20 } : f)));
+    setFilaments(prev => prev.map(f => {
+      if (f.id === id) {
+        const updated = { ...f, remainingGrams: grams, inStock: grams > 20 };
+        CloudDB.upsertFilament(updated);
+        return updated;
+      }
+      return f;
+    }));
   }, [setFilaments]);
 
   // --- MODEL PRESET ACTIONS ---
@@ -246,7 +372,11 @@ export function useAdminStore() {
 
   // --- SETTINGS ACTIONS ---
   const updateSettings = useCallback((newSettings: Partial<StoreSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
+    setSettings(prev => {
+      const updated = { ...prev, ...newSettings };
+      CloudDB.updateSettings(updated);
+      return updated;
+    });
   }, [setSettings]);
 
   // --- BACKUP & RESET ---
@@ -297,9 +427,10 @@ export function useAdminStore() {
       pendingReviewCount,
       printingCount,
       completedCount,
-      lowStockFilaments
+      lowStockFilaments,
+      isCloudConnected
     };
-  }, [orders, filaments]);
+  }, [orders, filaments, isCloudConnected]);
 
   return {
     orders,
@@ -308,6 +439,7 @@ export function useAdminStore() {
     printers,
     settings,
     analytics,
+    isCloudConnected,
     updateOrderStatus,
     advanceOrderStatus,
     saveOrderQuote,

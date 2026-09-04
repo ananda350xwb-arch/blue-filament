@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Save, Download, Upload, RotateCcw, ShieldCheck, Megaphone, DollarSign, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Download, Upload, RotateCcw, ShieldCheck, Megaphone, DollarSign, MessageCircle, Cloud, Database, CheckCircle2, AlertCircle, Copy, ExternalLink } from 'lucide-react';
 import { StoreSettings } from '../../types';
+import { getSupabaseConfig, saveSupabaseConfig, clearSupabaseConfig, testSupabaseConnection } from '../../lib/supabase';
 
 interface AdminSettingsProps {
   settings: StoreSettings;
@@ -23,9 +24,140 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [importJsonText, setImportJsonText] = useState('');
   const [showImportBox, setShowImportBox] = useState(false);
 
+  // Cloud Supabase State
+  const [cloudConfig, setCloudConfig] = useState(getSupabaseConfig());
+  const [supabaseUrl, setSupabaseUrl] = useState(cloudConfig.url);
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState(cloudConfig.anonKey);
+  const [isTestingCloud, setIsTestingCloud] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  useEffect(() => {
+    setCloudConfig(getSupabaseConfig());
+  }, []);
+
   const handleSave = () => {
     onUpdateSettings(form);
     onShowToast('บันทึกการตั้งค่าร้านค้าเรียบร้อย!', undefined, 'success');
+  };
+
+  const handleConnectCloud = async () => {
+    if (!supabaseUrl.trim() || !supabaseAnonKey.trim()) {
+      onShowToast('กรุณากรอก Supabase URL และ Anon Key ให้ครบถ้วน', undefined, 'error');
+      return;
+    }
+
+    setIsTestingCloud(true);
+    const result = await testSupabaseConnection(supabaseUrl.trim(), supabaseAnonKey.trim());
+    setIsTestingCloud(false);
+
+    if (result.success) {
+      saveSupabaseConfig(supabaseUrl.trim(), supabaseAnonKey.trim());
+      setCloudConfig({ url: supabaseUrl.trim(), anonKey: supabaseAnonKey.trim(), connected: true });
+      onShowToast('เชื่อมต่อ Cloud Database สำเร็จ!', result.message, 'success');
+    } else {
+      onShowToast('การเชื่อมต่อล้มเหลว', result.message, 'error');
+    }
+  };
+
+  const handleDisconnectCloud = () => {
+    if (window.confirm('คุณต้องการยกเลิกการเชื่อมต่อ Cloud Database และกลับไปใช้ LocalStorage ใช่หรือไม่?')) {
+      clearSupabaseConfig();
+      setCloudConfig({ url: '', anonKey: '', connected: false });
+      setSupabaseUrl('');
+      setSupabaseAnonKey('');
+      onShowToast('ยกเลิกการเชื่อมต่อ Cloud แล้ว', 'ระบบกลับมาใช้ LocalStorage ในเครื่อง', 'info');
+    }
+  };
+
+  const handleCopySqlSchema = () => {
+    const sqlSchema = `-- ==============================================================================
+-- BLUE FILAMENT 3D STUDIO - SUPABASE DATABASE SCHEMA
+-- Copy and paste this into Supabase Dashboard -> SQL Editor -> Run
+-- ==============================================================================
+
+-- 1. Create ORDERS table
+CREATE TABLE IF NOT EXISTS public.bf_orders (
+  order_id TEXT PRIMARY KEY,
+  model_url TEXT NOT NULL,
+  model_name TEXT NOT NULL,
+  color_count INTEGER NOT NULL DEFAULT 1,
+  colors JSONB NOT NULL DEFAULT '[]'::jsonb,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  scale NUMERIC NOT NULL DEFAULT 100,
+  infill TEXT NOT NULL DEFAULT 'standard',
+  note TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'PENDING_REVIEW',
+  price_status TEXT NOT NULL DEFAULT 'TO BE CONFIRMED',
+  quoted_price NUMERIC,
+  estimated_grams NUMERIC,
+  estimated_print_time_hours NUMERIC,
+  assigned_printer_id TEXT,
+  internal_notes TEXT,
+  tracking_number TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.bf_orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read access to bf_orders" ON public.bf_orders;
+CREATE POLICY "Allow public read access to bf_orders" ON public.bf_orders FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert access to bf_orders" ON public.bf_orders;
+CREATE POLICY "Allow public insert access to bf_orders" ON public.bf_orders FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update access to bf_orders" ON public.bf_orders;
+CREATE POLICY "Allow public update access to bf_orders" ON public.bf_orders FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow public delete access to bf_orders" ON public.bf_orders;
+CREATE POLICY "Allow public delete access to bf_orders" ON public.bf_orders FOR DELETE USING (true);
+
+-- 2. Create FILAMENTS table
+CREATE TABLE IF NOT EXISTS public.bf_filaments (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  name_th TEXT NOT NULL,
+  hex TEXT NOT NULL,
+  secondary_hex TEXT,
+  material TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'basic',
+  in_stock BOOLEAN NOT NULL DEFAULT true,
+  popular BOOLEAN DEFAULT false,
+  badge TEXT,
+  description_th TEXT,
+  remaining_grams NUMERIC DEFAULT 1000,
+  price_per_gram NUMERIC DEFAULT 1.2,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.bf_filaments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public all on bf_filaments" ON public.bf_filaments;
+CREATE POLICY "Allow public all on bf_filaments" ON public.bf_filaments FOR ALL USING (true);
+
+-- 3. Create STORE_SETTINGS table
+CREATE TABLE IF NOT EXISTS public.bf_settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  store_name TEXT NOT NULL DEFAULT 'Blue Filament 3D Studio',
+  line_id TEXT NOT NULL DEFAULT '@bluefilament',
+  phone TEXT NOT NULL DEFAULT '081-234-5678',
+  announcement_text TEXT DEFAULT '',
+  announcement_active BOOLEAN NOT NULL DEFAULT true,
+  base_price_per_gram NUMERIC NOT NULL DEFAULT 1.2,
+  ams_color_change_fee NUMERIC NOT NULL DEFAULT 25,
+  shipping_flat_rate NUMERIC NOT NULL DEFAULT 45,
+  license_notice TEXT DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.bf_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public all on bf_settings" ON public.bf_settings;
+CREATE POLICY "Allow public all on bf_settings" ON public.bf_settings FOR ALL USING (true);
+
+-- Enable Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_orders;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_filaments;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.bf_settings;`;
+
+    navigator.clipboard.writeText(sqlSchema);
+    setCopiedSql(true);
+    onShowToast('คัดลอกโค้ด SQL สำเร็จ!', 'นำไปวางใน SQL Editor บนเว็บ Supabase แล้วกด RUN ได้ทันที', 'success');
+    setTimeout(() => setCopiedSql(false), 3000);
   };
 
   const handleExport = () => {
@@ -63,10 +195,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display font-black text-2xl sm:text-3xl text-slate-900">
-            ตั้งค่าร้านค้า & สำรองข้อมูล
+            ตั้งค่าร้านค้า & ระบบ Cloud Database
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            ปรับแต่งข้อมูลติดต่อ อัตราคำนวณราคา ข้อความประกาศ และจัดการฐานข้อมูล
+            ปรับแต่งข้อมูลติดต่อ อัตราคำนวณราคา ข้อความประกาศ และเชื่อมต่อฐานข้อมูลออนไลน์
           </p>
         </div>
 
@@ -78,6 +210,128 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
           <Save className="w-4 h-4" />
           <span>บันทึกการเปลี่ยนแปลง</span>
         </button>
+      </div>
+
+      {/* CLOUD DATABASE (SUPABASE) CARD */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border-2 border-indigo-500/30 shadow-xl space-y-6 relative overflow-hidden">
+        
+        {/* Glow */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Card Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
+              <Cloud className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-black text-lg sm:text-xl text-white">
+                  ระบบฐานข้อมูลออนไลน์ (Supabase Cloud)
+                </h3>
+                {cloudConfig.connected ? (
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> ออนไลน์ Real-time
+                  </span>
+                ) : (
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> โหมด LocalStorage
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300">
+                ให้ออเดอร์ที่ลูกค้าสั่งจากมือถือบน Vercel ส่งเข้าหลังบ้านร้านข้ามเครื่องอัตโนมัติ
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://supabase.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-cyan-300 hover:text-white inline-flex items-center gap-1.5 self-start sm:self-auto bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 transition-colors"
+          >
+            <span>เปิดเว็บ Supabase</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+
+        {/* Setup Inputs */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Supabase URL */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <span>Supabase Project URL:</span>
+              </label>
+              <input
+                type="text"
+                value={supabaseUrl}
+                onChange={(e) => setSupabaseUrl(e.target.value)}
+                placeholder="https://xyzabcdefg.supabase.co"
+                className="w-full bg-white/10 border border-white/20 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono outline-none placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Anon Key */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-200">
+                Supabase anon public key:
+              </label>
+              <input
+                type="password"
+                value={supabaseAnonKey}
+                onChange={(e) => setSupabaseAnonKey(e.target.value)}
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                className="w-full bg-white/10 border border-white/20 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono outline-none placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleConnectCloud}
+              disabled={isTestingCloud}
+              className="btn-3d-blue px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white shadow-3d-blue flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <Database className="w-4 h-4" />
+              <span>{isTestingCloud ? 'กำลังทดสอบเชื่อมต่อ...' : 'ทดสอบและบันทึกเชื่อมต่อ Cloud'}</span>
+            </button>
+
+            {/* Copy SQL Schema Button */}
+            <button
+              type="button"
+              onClick={handleCopySqlSchema}
+              className="bg-white/15 hover:bg-white/25 border border-white/20 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all"
+            >
+              <Copy className="w-3.5 h-3.5 text-cyan-300" />
+              <span>{copiedSql ? '✓ คัดลอกโค้ด SQL แล้ว!' : 'คัดลอก SQL สร้างตาราง (SQL Editor)'}</span>
+            </button>
+
+            {cloudConfig.connected && (
+              <button
+                type="button"
+                onClick={handleDisconnectCloud}
+                className="text-xs text-red-300 hover:text-red-200 hover:underline cursor-pointer ml-auto"
+              >
+                ยกเลิกการเชื่อมต่อ Cloud
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 3 Step Simple Guide */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs space-y-2 text-slate-300">
+          <span className="font-bold text-white block">💡 วิธีสร้าง Cloud Database ฟรีบน Supabase ใน 1 นาที:</span>
+          <ol className="list-decimal list-inside space-y-1 leading-relaxed text-slate-300">
+            <li>เปิดเว็บ <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline font-bold">supabase.com</a> ล็อกอินด้วย GitHub แล้วกด <strong>"New Project"</strong> (ฟรี)</li>
+            <li>ไปที่เมนู <strong>SQL Editor</strong> ➔ กดปุ่ม <strong>"คัดลอก SQL สร้างตาราง"</strong> ด้านบนไปวางแล้วกด <strong>RUN</strong></li>
+            <li>ไปที่ <strong>Project Settings ➔ API</strong> คัดลอก <strong>Project URL</strong> และ <strong>anon public key</strong> มาใส่ในช่องด้านบน แล้วกดเชื่อมต่อได้ทันทีครับ!</li>
+          </ol>
+        </div>
+
       </div>
 
       {/* Form Cards Grid */}
